@@ -17,6 +17,7 @@
 
 
 import os
+import time
 
 
 import numpy as np
@@ -86,7 +87,7 @@ test_data.set_index(ID_COLUMN, inplace=True)
 
 
 print("First few rows of data:")
-display(train_data.head())
+print(train_data.head())
 
 
 # In[126]:
@@ -125,7 +126,7 @@ print(f"Target column: {TARGET_COLUMN}")
 
 
 print("\nSummary statistics:")
-display(train_data.describe())
+print(train_data.describe())
 
 print("\nMissing values:")
 print(train_data.isnull().sum())
@@ -385,7 +386,7 @@ train_data_transformed_df.columns = new_column_names
 # Check for missing values
 
 print("Number of missing values in transformed data:")
-display(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
+print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 
 assert train_data_transformed_df.isna().sum().sum() == 0
 
@@ -426,7 +427,7 @@ sns.heatmap(
 plt.title("Correlation Matrix")
 plt.xticks(rotation=45, ha="right")
 plt.yticks(rotation=0)
-plt.show()
+# plt.show()
 
 
 # In[141]:
@@ -440,7 +441,7 @@ target_corr_matrix = corr_matrix[[TARGET_COLUMN]].sort_values(
 plt.figure(figsize=(4, 6))
 sns.heatmap(target_corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", vmin=-1, vmax=1)
 plt.title(f"Correlation with {TARGET_COLUMN}")
-plt.show()
+# plt.show()
 
 
 # ## Tuning Grids
@@ -590,6 +591,7 @@ X_train, X_val, y_train, y_val = train_test_split(
 
 # In[ ]:
 
+start_time = time.time()
 
 # Run experiments
 grid_search = GridSearchCV(
@@ -601,6 +603,14 @@ grid_search = GridSearchCV(
 )
 
 grid_search.fit(X_train, y_train)
+
+end_time = time.time()
+
+# Save elapsed time to a file
+elapsed_time = end_time - start_time
+elapsed_time_file = f"{DATA_DIR}/elapsed_time.txt"
+with open(elapsed_time_file, "w") as f:
+    f.write(f"Elapsed time: {elapsed_time} seconds")
 
 
 # #### Best so far
