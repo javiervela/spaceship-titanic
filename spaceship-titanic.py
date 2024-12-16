@@ -13,19 +13,21 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[ ]:
+# In[3]:
 
 
 import os
-import time
-
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    GradientBoostingClassifier,
+)
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
 from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.linear_model import LogisticRegression
@@ -43,6 +45,8 @@ from sklearn.preprocessing import (
 )
 from sklearn.svm import SVC
 from sklearn.utils.validation import check_is_fitted
+from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 
 
 # In[122]:
@@ -133,7 +137,7 @@ print(train_data.isnull().sum())
 
 # print("\nCorrelation matrix:")
 # sns.heatmap(train_data[NUMERICAL_COLUMNS].corr(), annot=True)
-# plt.show()
+# # plt.show()
 
 print("\nValue counts for categorical variables:")
 for col in CATEGORICAL_COLUMNS:
@@ -443,7 +447,6 @@ sns.heatmap(target_corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", vmin=-1,
 plt.title(f"Correlation with {TARGET_COLUMN}")
 # plt.show()
 
-
 # ## Tuning Grids
 # 
 
@@ -475,42 +478,42 @@ pipeline = Pipeline(
 preprocessor_grids = [
     {
         "preprocessor__cat_onehot__impute": [
-            # SimpleImputer(strategy="most_frequent"),
+            # SimpleImputer(strategy="most_frequent"), # 
             SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
         ]
     },
     {
         "preprocessor__cat_onehot__onehot": [
             OneHotEncoder(),
-            # OrdinalEncoder(),
+            # OrdinalEncoder(), # 
         ]
     },
     {
         "preprocessor__cat_ordinal__impute": [
-            # SimpleImputer(strategy="most_frequent"),
+            # SimpleImputer(strategy="most_frequent"), # 
             SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
         ]
     },
     {
         "preprocessor__cat_ordinal__ordinal": [
             OneHotEncoder(), # TODO works better?
-            OrdinalEncoder(),
+            # OrdinalEncoder(), #
         ]
     },
     {
         "preprocessor__num__impute": [
-            # KNNImputer(n_neighbors=1),
-            # KNNImputer(n_neighbors=3),
-            # KNNImputer(n_neighbors=5),
-            # SimpleImputer(strategy="mean"),
+            # KNNImputer(n_neighbors=1), # 
+            # KNNImputer(n_neighbors=3), # 
+            # KNNImputer(n_neighbors=5), # 
+            # SimpleImputer(strategy="mean"), # 
             SimpleImputer(strategy="median"),
         ]
     },
     {
         "preprocessor__num__scale": [
             StandardScaler(),
-            # MinMaxScaler(),
-            # RobustScaler(),
+            # MinMaxScaler(), # 
+            # RobustScaler(), # 
         ]
     },
 ]
@@ -528,33 +531,66 @@ preprocessor_grids = [
 
 model_grids = [
     {
-        # Random Forest
-        "classifier": [RandomForestClassifier(random_state=RANDOM_SEED)],
-        "classifier__n_estimators": [100, 200],
-        "classifier__max_depth": [None, 10, 20],
-    },
-    {
         # Logistic Regression
         "classifier": [LogisticRegression()],
-        "classifier__C": [0.1, 1, 10],
+        "classifier__C": [0.01, 0.1, 1, 10, 100],
+        "classifier__penalty": ["l1", "l2"],
+        "classifier__solver": ["liblinear", "saga"],
+    },
+    {
+        # Decision Tree
+        "classifier": [DecisionTreeClassifier(random_state=RANDOM_SEED)],
+        "classifier__max_depth": [None, 10, 20, 30],
+        "classifier__min_samples_split": [2, 5, 10],
+        "classifier__min_samples_leaf": [1, 2, 4],
+    },
+    {
+        # Random Forest
+        "classifier": [RandomForestClassifier(random_state=RANDOM_SEED)],
+        "classifier__n_estimators": [100, 200, 300],
+        "classifier__max_depth": [None, 10, 20, 30],
+        "classifier__min_samples_split": [2, 5, 10],
+        "classifier__min_samples_leaf": [1, 2, 4],
     },
     {
         # Support Vector Machine
         "classifier": [SVC(probability=True)],
-        "classifier__C": [0.1, 1, 10],
-        "classifier__kernel": ["linear", "rbf"],
+        "classifier__C": [0.01, 0.1, 1, 10],
+        "classifier__kernel": ["linear", "rbf", "poly"],
+        "classifier__gamma": ["scale", "auto"],
     },
     {
         # Gradient Boosting
         "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
         "classifier__n_estimators": [100, 250, 500],
-        "classifier__learning_rate": [0.05, 0.1, 0.2],
+        "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
+        "classifier__max_depth": [3, 5, 7],
+        "classifier__subsample": [0.8, 1.0],
     },
     {
         # K-Nearest Neighbors
         "classifier": [KNeighborsClassifier()],
-        "classifier__n_neighbors": [3, 5, 7, 9],
+        "classifier__n_neighbors": [3, 5, 7, 9, 11],
         "classifier__weights": ["uniform", "distance"],
+        "classifier__metric": ["euclidean", "manhattan"],
+    },
+    {
+        # XGBoost
+        "classifier": [XGBClassifier(random_state=RANDOM_SEED)],
+        "classifier__n_estimators": [100, 250, 500],
+        "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
+        "classifier__max_depth": [3, 6, 9],
+        "classifier__subsample": [0.8, 1.0],
+        "classifier__colsample_bytree": [0.8, 1.0],
+    },
+    {
+        # LightGBM
+        "classifier": [LGBMClassifier(random_state=RANDOM_SEED)],
+        "classifier__n_estimators": [100, 250, 500],
+        "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
+        "classifier__max_depth": [3, 6, 9],
+        "classifier__subsample": [0.8, 1.0],
+        "classifier__colsample_bytree": [0.8, 1.0],
     },
 ]
 
@@ -591,7 +627,6 @@ X_train, X_val, y_train, y_val = train_test_split(
 
 # In[ ]:
 
-start_time = time.time()
 
 # Run experiments
 grid_search = GridSearchCV(
@@ -603,14 +638,6 @@ grid_search = GridSearchCV(
 )
 
 grid_search.fit(X_train, y_train)
-
-end_time = time.time()
-
-# Save elapsed time to a file
-elapsed_time = end_time - start_time
-elapsed_time_file = f"{DATA_DIR}/elapsed_time.txt"
-with open(elapsed_time_file, "w") as f:
-    f.write(f"Elapsed time: {elapsed_time} seconds")
 
 
 # #### Best so far
