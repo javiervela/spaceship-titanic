@@ -13,43 +13,44 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[3]:
+# In[1]:
 
 
 import os
+import json
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import (
-    RandomForestClassifier,
-    GradientBoostingClassifier,
-)
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
-from sklearn.impute import SimpleImputer, KNNImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif, mutual_info_classif, RFE
+from sklearn.impute import KNNImputer, SimpleImputer
+from sklearn.linear_model import LassoCV, LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.preprocessing import (
+    FunctionTransformer,
+    LabelEncoder,
+    MinMaxScaler,
     OneHotEncoder,
     OrdinalEncoder,
-    LabelEncoder,
-    StandardScaler,
-    MinMaxScaler,
+    PolynomialFeatures,
     RobustScaler,
+    StandardScaler,
 )
 from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils.validation import check_is_fitted
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
+from featuretools import EntitySet, dfs
 
 
-# In[122]:
+# In[2]:
 
 
 # Define constants
@@ -68,7 +69,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[123]:
+# In[3]:
 
 
 # Load the data files into pandas dataframes
@@ -76,32 +77,24 @@ train_data = pd.read_csv(TRAIN_DATA_FILE)
 test_data = pd.read_csv(TEST_DATA_FILE)
 
 
-# In[124]:
-
-
-# Make PassengerId the index
-train_data.set_index(ID_COLUMN, inplace=True)
-test_data.set_index(ID_COLUMN, inplace=True)
-
-
 # ## Data Exploration
 # 
 
-# In[ ]:
+# In[4]:
 
 
 print("First few rows of data:")
 print(train_data.head())
 
 
-# In[126]:
+# In[5]:
 
 
 print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[ ]:
+# In[6]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -118,7 +111,7 @@ leftover_columns = [
 assert not leftover_columns
 
 
-# In[128]:
+# In[7]:
 
 
 print(f"Numerical columns: {NUMERICAL_COLUMNS}")
@@ -126,7 +119,7 @@ print(f"Categorical columns: {CATEGORICAL_COLUMNS}")
 print(f"Target column: {TARGET_COLUMN}")
 
 
-# In[129]:
+# In[8]:
 
 
 print("\nSummary statistics:")
@@ -145,7 +138,7 @@ for col in CATEGORICAL_COLUMNS:
     print(train_data[col].value_counts())
 
 
-# In[130]:
+# In[9]:
 
 
 train_data
@@ -156,108 +149,112 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[ ]:
+# In[10]:
 
 
 def clean_data(data: pd.DataFrame):
 
-    # Convert Cabin to three different columns (Deck, Number, Side)
+    data = data.copy()
+
+    # Convert columns to integer (with missing values)
+    for col in [
+        "CabinNumber",
+        "CryoSleep",
+        "VIP",
+        "Transported",
+        "PassengerGroupId",
+        "PassengerIntraGroupId",
+    ]:
+        if col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors="coerce").astype("Int64")
+
+    # Make PassengerId the index
+    data.set_index(ID_COLUMN, inplace=True)
+
+    # Drop columns
+    data.drop(
+        columns=["Name", "Cabin", "PassengerGroupId", "PassengerIntraGroupId"],
+        inplace=True,
+    )
+
+
+    return data
+
+
+# In[11]:
+
+
+# train_data = clean_data(train_data)
+# test_data = clean_data(test_data)
+
+
+# ## Create Features
+
+# In[12]:
+
+
+def create_features(data: pd.DataFrame):
+
+    data = data.copy()
+
+    # Create new feature: Total money spent in the ship's service
+    data["AmountSpentTotal"] = data[
+        ["RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"]
+    ].sum(axis=1, skipna=True)
+
+    # Create new feature: Mean money spent in the ship's service
+    # data["AmountSpentMean"] = data[
+    #     ["RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"]
+    # ].mean(axis=1, skipna=True)
+
+    # Create new features: Convert Cabin to three different columns (Deck, Number, Side)
     data[["CabinDeck", "CabinNumber", "CabinSide"]] = data["Cabin"].str.split(
         "/", expand=True
     )
 
-    # Convert columns to integer (with missing values)
-    for col in ["CabinNumber", "CryoSleep", "VIP", "Transported"]:
-        if col in data.columns:
-            data[col] = pd.to_numeric(data[col], errors="coerce").astype("Int64")
+    # Create new feature: Number of people in the same cabin
+    data["CabinMates"] = data.groupby("Cabin")["Cabin"].transform("count")
 
-    # Drop columns
-    data.drop(columns=["Name", "Cabin"], inplace=True)
-
+    # Create new features: Group Id, Group Size, Intra Group Id,
+    data[["PassengerGroupId","PassengerIntraGroupId"]] = data[ID_COLUMN].str.split("_", expand=True)
+    data["PassengerGroupSize"] = data.groupby("PassengerGroupId")[
+        "PassengerGroupId"
+    ].transform("count")
+    
     return data
 
 
-# In[132]:
+# In[13]:
 
 
-train_data = clean_data(train_data)
-test_data = clean_data(test_data)
+# train_data = create_features(train_data)
+# test_data = create_features(test_data)
 
 
-# In[ ]:
+# In[14]:
 
 
-def create_features(data: pd.DataFrame):
-    data["AmountSpentTotal"] = data[
-        ["RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"]
-    ].sum(axis=1, skipna=True)
-    data["AmountSpentMean"] = data[
-        ["RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"]
-    ].mean(axis=1, skipna=True)
-    # TODO add more features ?
-    return data
-
-
-# In[134]:
-
-
-train_data = create_features(train_data)
-test_data = create_features(test_data)
-
-
-# In[ ]:
-
-
-handle_missing_values = ColumnTransformer(
-    transformers=[
-        (
-            "cat",
-            SimpleImputer(strategy="most_frequent"),
-            ["HomePlanet", "Destination", "CabinDeck", "CabinSide"],
-        ),
-        (
-            "num",
-            KNNImputer(n_neighbors=5),
-            [
-                "CryoSleep",
-                "Age",
-                "VIP",
-                "RoomService",
-                "FoodCourt",
-                "ShoppingMall",
-                "Spa",
-                "VRDeck",
-                "CabinNumber",
-                "AmountSpentTotal",
-                "AmountSpentMean",
-            ],
-        ),
-    ],
-    remainder="passthrough",
-    # sparse_threshold=0,
+pipeline = Pipeline(
+	[
+		("create_features", FunctionTransformer(create_features)),
+		("clean_data", FunctionTransformer(clean_data)),
+	]
 )
 
-# Other numerical inputers
-# SimpleImputer(strategy="mean")
-# SimpleImputer(strategy="median")
-# KNNImputer(n_neighbors=5)
 
-# Other categorical inputers
-# SimpleImputer(strategy="most_frequent")
-# SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
-
-# handle_missing_values.set_output(transform="pandas")
+# In[15]:
 
 
-# ## Data Preprocessing Joint Pipeline
+train_data_transformed_df = pipeline.fit_transform(train_data)
+print(train_data_transformed_df.dtypes)
+
+
+# ## Data Preprocessing Pipeline
 # 
 # ### Handle Missing Values
 # 
 # - Input Data
 # - Mark as "Missing"
-# 
-# - TODO:
-#   - Look for other inputer strategies
 # 
 # ### Data Preprocessing
 # 
@@ -266,17 +263,8 @@ handle_missing_values = ColumnTransformer(
 #   - Ordinal encoding
 # - Scale Numerical Columns
 # 
-# - TODO:
-#   - Other scaling techniques
-# 
 
-# In[ ]:
-
-
-# Other numerical inputers
-# SimpleImputer(strategy="mean")
-# SimpleImputer(strategy="median")
-# KNNImputer(n_neighbors=5)
+# In[16]:
 
 
 # Combine handling missing values and preprocessing into a single ColumnTransformer
@@ -312,8 +300,8 @@ preprocessor = ColumnTransformer(
                     ),
                     (
                         "ordinal",
-                        OneHotEncoder(),
-                        # OrdinalEncoder(),
+                        # OneHotEncoder(),
+                        OrdinalEncoder(),
                         # LabelEncoder(),
                     ),
                 ]
@@ -351,7 +339,9 @@ preprocessor = ColumnTransformer(
                 "VRDeck",
                 "CabinNumber",
                 "AmountSpentTotal",
-                "AmountSpentMean",
+                # "AmountSpentMean",
+				"CabinMates",
+				"PassengerGroupSize",
             ],
         ),
     ],
@@ -362,20 +352,63 @@ preprocessor = ColumnTransformer(
 # preprocessor.set_output(transform="pandas")
 
 
-# In[ ]:
+# In[17]:
 
 
-# Fit and transform the train_data using the preprocessor
-train_data_transformed = preprocessor.fit_transform(train_data)
-
-# Convert the transformed data back to a DataFrame
-train_data_transformed_df = pd.DataFrame(
-    train_data_transformed, columns=preprocessor.get_feature_names_out()
+pipeline = Pipeline(
+    steps=[
+        ("create_features", FunctionTransformer(create_features)),
+        ("clean_data", FunctionTransformer(clean_data)),
+        ("preprocessor", preprocessor),
+    ]
 )
 
-# Rename columns to remove prefixes
-new_column_names = [col.split("__")[-1] for col in train_data_transformed_df.columns]
-train_data_transformed_df.columns = new_column_names
+
+# In[58]:
+
+
+def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
+    X = data.drop(columns=[TARGET_COLUMN])
+    y = data[TARGET_COLUMN]
+    
+    # Fit and transform the data using the pipeline
+    data_transformed = pipeline.fit_transform(X=X, y=y)
+
+    # Extract feature names from the preprocessor step
+    if 'preprocessor' in pipeline.named_steps:
+        feature_names = pipeline.named_steps['preprocessor'].get_feature_names_out()
+    else:
+        feature_names = data.columns
+
+    # Extract the selected feature indices from the feature engineering step
+    if 'feature_engineering' in pipeline.named_steps:
+        feature_selector = pipeline.named_steps['feature_engineering'].named_steps['feature_selection']
+        if isinstance(feature_selector, SelectFromModel):
+            support_mask = feature_selector.get_support()
+        elif isinstance(feature_selector, RFE):
+            support_mask = feature_selector.support_
+        else:
+            support_mask = np.ones(len(feature_names), dtype=bool)
+        selected_feature_names = [name for name, selected in zip(feature_names, support_mask) if selected]
+    else:
+        selected_feature_names = feature_names
+
+    # Remove prefixes from the column names
+    selected_feature_names = [name.split('__')[-1] for name in selected_feature_names]
+
+    # Convert the transformed data back to a DataFrame
+    data_transformed_df = pd.DataFrame(data_transformed, columns=selected_feature_names)
+
+    data_transformed_df[TARGET_COLUMN] = y.values
+
+    return data_transformed_df
+
+
+# In[60]:
+
+
+# Use the function to transform the train_data
+train_data_transformed_df = transform_data(train_data, pipeline)
 
 
 # ### Check Preprocessing Works
@@ -384,7 +417,7 @@ train_data_transformed_df.columns = new_column_names
 # - Check if all columns are numerical after preprocessing
 # 
 
-# In[138]:
+# In[61]:
 
 
 # Check for missing values
@@ -395,7 +428,7 @@ print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 assert train_data_transformed_df.isna().sum().sum() == 0
 
 
-# In[ ]:
+# In[66]:
 
 
 # Check all columns are numerical
@@ -405,16 +438,67 @@ all_columns_numerical = train_data_transformed_df.select_dtypes(
 ).columns.tolist()
 all_columns = train_data_transformed_df.columns.tolist()
 
-columns_not_numerical = set(all_columns) - set(all_columns_numerical)
+columns_not_numerical = set(all_columns) - set(all_columns_numerical) - set([TARGET_COLUMN])
 print(f"Columns not numerical: {columns_not_numerical}")
 
-assert all_columns_numerical == all_columns
+# Output the types of the non-numerical columns
+for col in columns_not_numerical:
+    print(f"Column: {col}, Type: {train_data_transformed_df[col].dtype}, First Value: {train_data_transformed_df[col].iloc[0]}")
+
+assert columns_not_numerical == set()
+
+
+# ## Feature Engineering
+
+# In[67]:
+
+
+feature_engineering = Pipeline(
+    steps=[
+        # ("polynomial_features", PolynomialFeatures(degree=2, include_bias=False)),
+        # ("feature_selection", RFE(estimator=RandomForestClassifier(random_state=RANDOM_SEED))),
+        # ("feature_selection", RFE(estimator=RandomForestClassifier(random_state=RANDOM_SEED), n_features_to_select=10)),
+        ("feature_selection", SelectFromModel(LassoCV(cv=5, random_state=RANDOM_SEED))),
+        # ("feature_selection", SelectKBest(f_classif, k=10)),
+        # ("feature_selection", SelectKBest(mutual_info_classif, k=10)),
+        # ("feature_selection", SelectKBest(f_classif, k=20)),
+        # ("feature_selection", SelectKBest(mutual_info_classif, k=20)),
+        # ("feature_selection", SelectFromModel(RandomForestClassifier(random_state=RANDOM_SEED), threshold="mean")),
+    ]
+)
+
+
+# In[68]:
+
+
+# Add the feature engineering pipeline to the main pipeline
+pipeline = Pipeline(
+	steps=[
+		("create_features", FunctionTransformer(create_features)),
+		("clean_data", FunctionTransformer(clean_data)),
+		("preprocessor", preprocessor),
+		("feature_engineering", feature_engineering),
+	]
+)
+
+
+# In[69]:
+
+
+# Use the function to transform the train_data
+train_data_transformed_df = transform_data(train_data, pipeline)
+
+
+# In[70]:
+
+
+train_data_transformed_df.columns
 
 
 # ## Analyze Correlation on Transformed Dataset
 # 
 
-# In[ ]:
+# In[71]:
 
 
 corr_matrix = train_data_transformed_df.corr()
@@ -425,8 +509,8 @@ sns.heatmap(
     annot=True,
     cmap="coolwarm",
     fmt=".2f",
-    xticklabels=all_columns,
-    yticklabels=all_columns,
+    xticklabels=train_data_transformed_df.columns.tolist(),
+    yticklabels=train_data_transformed_df.columns.tolist(),
 )
 plt.title("Correlation Matrix")
 plt.xticks(rotation=45, ha="right")
@@ -434,7 +518,7 @@ plt.yticks(rotation=0)
 # plt.show()
 
 
-# In[141]:
+# In[72]:
 
 
 # Filter the correlation matrix to only include the Target Column
@@ -442,22 +526,26 @@ target_corr_matrix = corr_matrix[[TARGET_COLUMN]].sort_values(
     by=TARGET_COLUMN, ascending=False
 )
 
-plt.figure(figsize=(4, 6))
+plt.figure(figsize=(8, 12))
 sns.heatmap(target_corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", vmin=-1, vmax=1)
 plt.title(f"Correlation with {TARGET_COLUMN}")
 # plt.show()
 
+
 # ## Tuning Grids
 # 
 
-# In[142]:
+# In[73]:
 
 
 # Main pipeline
 
 pipeline = Pipeline(
     steps=[
+        ("create_features", FunctionTransformer(create_features)),
+        ("clean_data", FunctionTransformer(clean_data)),
         ("preprocessor", preprocessor),
+		("feature_engineering", feature_engineering),
         ("classifier", "passthrough"),
     ]
 )
@@ -472,51 +560,39 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[ ]:
+# In[74]:
 
 
-preprocessor_grids = [
-    {
-        "preprocessor__cat_onehot__impute": [
-            # SimpleImputer(strategy="most_frequent"), # 
-            SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
-        ]
-    },
-    {
-        "preprocessor__cat_onehot__onehot": [
-            OneHotEncoder(),
-            # OrdinalEncoder(), # 
-        ]
-    },
-    {
-        "preprocessor__cat_ordinal__impute": [
-            # SimpleImputer(strategy="most_frequent"), # 
-            SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
-        ]
-    },
-    {
-        "preprocessor__cat_ordinal__ordinal": [
-            OneHotEncoder(), # TODO works better?
-            # OrdinalEncoder(), #
-        ]
-    },
-    {
-        "preprocessor__num__impute": [
-            # KNNImputer(n_neighbors=1), # 
-            # KNNImputer(n_neighbors=3), # 
-            # KNNImputer(n_neighbors=5), # 
-            # SimpleImputer(strategy="mean"), # 
-            SimpleImputer(strategy="median"),
-        ]
-    },
-    {
-        "preprocessor__num__scale": [
-            StandardScaler(),
-            # MinMaxScaler(), # 
-            # RobustScaler(), # 
-        ]
-    },
-]
+preprocessor_grid = {
+    "preprocessor__cat_onehot__impute": [
+        SimpleImputer(strategy="most_frequent"), #
+        SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
+    ],
+    "preprocessor__cat_onehot__onehot": [
+        OneHotEncoder(),
+        # OrdinalEncoder(), #
+    ],
+    "preprocessor__cat_ordinal__impute": [
+        SimpleImputer(strategy="most_frequent"), #
+        SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
+    ],
+    "preprocessor__cat_ordinal__ordinal": [
+        OneHotEncoder(),  # TODO works better?
+        OrdinalEncoder(), #
+    ],
+    "preprocessor__num__impute": [
+        # KNNImputer(n_neighbors=1), #
+        # KNNImputer(n_neighbors=3), #
+        # KNNImputer(n_neighbors=5), #
+        # SimpleImputer(strategy="mean"), #
+        SimpleImputer(strategy="median"),
+    ],
+    "preprocessor__num__scale": [
+        StandardScaler(),
+        # MinMaxScaler(), #
+        # RobustScaler(), #
+    ],
+}
 
 
 # ### Model Grid
@@ -526,94 +602,117 @@ preprocessor_grids = [
 # 3 min 45s
 # 
 
-# In[176]:
+# In[75]:
 
 
 model_grids = [
     {
         # Logistic Regression
         "classifier": [LogisticRegression()],
-        "classifier__C": [0.01, 0.1, 1, 10, 100],
-        "classifier__penalty": ["l1", "l2"],
-        "classifier__solver": ["liblinear", "saga"],
+        # "classifier__C": [0.01, 0.1, 1, 10, 100],
+        # "classifier__penalty": ["l1", "l2"],
+        # "classifier__solver": ["liblinear", "saga"],
     },
     {
         # Decision Tree
         "classifier": [DecisionTreeClassifier(random_state=RANDOM_SEED)],
-        "classifier__max_depth": [None, 10, 20, 30],
-        "classifier__min_samples_split": [2, 5, 10],
-        "classifier__min_samples_leaf": [1, 2, 4],
+        # "classifier__max_depth": [None, 10, 20, 30],
+        # "classifier__min_samples_split": [2, 5, 10],
+        # "classifier__min_samples_leaf": [1, 2, 4],
     },
     {
         # Random Forest
         "classifier": [RandomForestClassifier(random_state=RANDOM_SEED)],
-        "classifier__n_estimators": [100, 200, 300],
-        "classifier__max_depth": [None, 10, 20, 30],
-        "classifier__min_samples_split": [2, 5, 10],
-        "classifier__min_samples_leaf": [1, 2, 4],
+        # "classifier__n_estimators": [100, 200, 300],
+        # "classifier__max_depth": [None, 10, 20, 30],
+        # "classifier__min_samples_split": [2, 5, 10],
+        # "classifier__min_samples_leaf": [1, 2, 4],
     },
     {
         # Support Vector Machine
         "classifier": [SVC(probability=True)],
-        "classifier__C": [0.01, 0.1, 1, 10],
-        "classifier__kernel": ["linear", "rbf", "poly"],
-        "classifier__gamma": ["scale", "auto"],
+        # "classifier__C": [0.01, 0.1, 1, 10],
+        # "classifier__kernel": ["linear", "rbf", "poly"],
+        # "classifier__gamma": ["scale", "auto"],
     },
     {
         # Gradient Boosting
         "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
-        "classifier__n_estimators": [100, 250, 500],
-        "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
-        "classifier__max_depth": [3, 5, 7],
-        "classifier__subsample": [0.8, 1.0],
+        # "classifier__n_estimators": [100, 250, 500],
+        # "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
+        # "classifier__max_depth": [3, 5, 7],
+        # "classifier__subsample": [0.8, 1.0],
     },
     {
         # K-Nearest Neighbors
         "classifier": [KNeighborsClassifier()],
-        "classifier__n_neighbors": [3, 5, 7, 9, 11],
-        "classifier__weights": ["uniform", "distance"],
-        "classifier__metric": ["euclidean", "manhattan"],
+        # "classifier__n_neighbors": [3, 5, 7, 9, 11],
+        # "classifier__weights": ["uniform", "distance"],
+        # "classifier__metric": ["euclidean", "manhattan"],
     },
     {
         # XGBoost
         "classifier": [XGBClassifier(random_state=RANDOM_SEED)],
-        "classifier__n_estimators": [100, 250, 500],
-        "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
-        "classifier__max_depth": [3, 6, 9],
-        "classifier__subsample": [0.8, 1.0],
-        "classifier__colsample_bytree": [0.8, 1.0],
+        # "classifier__n_estimators": [100, 250, 500],
+        # "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
+        # "classifier__max_depth": [3, 6, 9],
+        # "classifier__subsample": [0.8, 1.0],
+        # "classifier__colsample_bytree": [0.8, 1.0],
     },
     {
         # LightGBM
-        "classifier": [LGBMClassifier(random_state=RANDOM_SEED)],
-        "classifier__n_estimators": [100, 250, 500],
-        "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
-        "classifier__max_depth": [3, 6, 9],
-        "classifier__subsample": [0.8, 1.0],
-        "classifier__colsample_bytree": [0.8, 1.0],
+        "classifier": [LGBMClassifier(random_state=RANDOM_SEED, verbose=-1)],
+        # "classifier__n_estimators": [100, 250, 500],
+        # "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
+        # "classifier__max_depth": [3, 6, 9],
+        # "classifier__subsample": [0.8, 1.0],
+        # "classifier__colsample_bytree": [0.8, 1.0],
     },
 ]
+
+
+# In[76]:
+
+
+# model_grids = [
+#     {
+#         # Gradient Boosting
+#         "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
+#         "classifier__n_estimators": [200],
+#         "classifier__learning_rate": [0.1],
+#         # "classifier__max_depth": [None, 3, 5, 7],
+#         # "classifier__subsample": [None, 0.8, 1.0],
+#     },
+#     # {
+#     #     # LightGBM
+#     #     "classifier": [LGBMClassifier(random_state=RANDOM_SEED, verbose=-1)],
+#     #     "classifier__n_estimators": [ 500],
+#     #     "classifier__learning_rate": [ 0.1],
+#     #     "classifier__max_depth": [3],
+#     #     "classifier__subsample": [0.8],
+#     #     "classifier__colsample_bytree": [ 1.0],
+#     # },
+# ]
 
 
 # ### Final Grid Search
 # 
 
-# In[182]:
+# In[77]:
 
 
 parameter_grids = []
 
 for m in model_grids:
-    for p in preprocessor_grids:
-        grid = m
-        grid.update(p)
-        parameter_grids.append(grid)
+    grid = m
+    grid.update(preprocessor_grid)
+    parameter_grids.append(grid)
 
 
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[183]:
+# In[78]:
 
 
 # Split the train data into training and validation sets
@@ -625,7 +724,7 @@ X_train, X_val, y_train, y_val = train_test_split(
 )
 
 
-# In[ ]:
+# In[79]:
 
 
 # Run experiments
@@ -634,10 +733,18 @@ grid_search = GridSearchCV(
     param_grid=parameter_grids,
     cv=5,  # TODO parametrize
     scoring="accuracy",
-    verbose=2,
+    verbose=1,
 )
 
 grid_search.fit(X_train, y_train)
+
+
+# In[80]:
+
+
+def print_model_parameters(params):
+    for k, v in params.items():
+        print(f"  {k:<50}: {v}")
 
 
 # #### Best so far
@@ -656,53 +763,84 @@ grid_search.fit(X_train, y_train)
 # ```
 # 
 
-# In[ ]:
+# In[81]:
 
 
 # grid_search.best_estimator_
 best_params = grid_search.best_params_
-print(
-    f"Best Model:\n{"\n".join([f"{k:<50}: {v}" for k,v in grid_search.best_params_.items()])}"
-)
+print("Best Model:")
+print_model_parameters(best_params)
 
 
-# In[ ]:
+# In[82]:
 
 
-# Save the best model parameters to a file
-best_params = grid_search.best_params_
-best_params_file = f"{DATA_DIR}/best_params.txt"
+# Save the best (in train) model parameters to a JSON file
+best_params_file = f"{DATA_DIR}/best_params_train.json"
+
+# Convert non-serializable objects to their string representations
+serializable_best_params = {k: str(v) for k, v in best_params.items()}
+
 with open(best_params_file, "w") as f:
-	f.write(str(best_params))
+    json.dump(serializable_best_params, f, indent=4)
 
 
 # ## Best Model Evaluation with Validation Set
 # 
 
-# In[ ]:
+# In[83]:
 
 
-model = grid_search
+def evaluate_model(pipeline, estimator, X_val, y_val):
+    y_pred = pipeline.predict(X_val)
+    y_pred_proba = (
+        pipeline.predict_proba(X_val)[:, 1] if hasattr(pipeline, "predict_proba") else None
+    )
+    accuracy = accuracy_score(y_val, y_pred)
+    roc_auc = roc_auc_score(y_val, y_pred_proba) if y_pred_proba is not None else None
+
+    print(f"Accuracy: {accuracy}")
+    if roc_auc is not None:
+        print(f"ROC AUC: {roc_auc}")
+    # print(classification_report(y_val, y_pred))
+    print("Model:")
+    print_model_parameters(estimator)
+
+    return accuracy
 
 
-y_pred = model.predict(X_val)
-y_pred_proba = (
-    model.predict_proba(X_val)[:, 1] if hasattr(model, "predict_proba") else None
-)
-accuracy = accuracy_score(y_val, y_pred)
-roc_auc = roc_auc_score(y_val, y_pred_proba) if y_pred_proba is not None else None
+# In[84]:
 
-print(f"Best Model:\n", grid_search.best_params_)
-print(f"Accuracy: {accuracy}")
-if roc_auc is not None:
-    print(f"ROC AUC: {roc_auc}")
-print(classification_report(y_val, y_pred))
+
+# Assuming grid_search is your GridSearchCV object
+all_estimators_with_scores = list(zip(grid_search.cv_results_['params'], grid_search.cv_results_['mean_test_score']))
+
+# Sort the estimators by their scores in descending order
+all_estimators_with_scores.sort(key=lambda x: x[1], reverse=True)
+
+# Print all estimators with their scores and ranking
+for rank, (estimator, score) in enumerate(all_estimators_with_scores, start=1):
+    print(f"Rank: {rank}")
+    print(f"Accuracy: {score}")
+    print("Model:")
+    print_model_parameters(estimator)
+    print("\n")
+
+
+# In[85]:
+
+
+# Evaluate all estimators in grid search with validation set
+for estimator, _ in all_estimators_with_scores:
+	pipeline.set_params(**estimator)
+	pipeline.fit(X_train, y_train)
+	score = evaluate_model(pipeline,estimator, X_val, y_val)
 
 
 # ## Final Model Training and Submission
 # 
 
-# In[ ]:
+# In[86]:
 
 
 # Retrain the best model on the full training data
@@ -710,7 +848,7 @@ best_model = grid_search.best_estimator_
 best_model.fit(X, y)
 
 
-# In[ ]:
+# In[87]:
 
 
 # Make predictions on the test data
@@ -724,7 +862,7 @@ test_data[TARGET_COLUMN] = y_pred.astype(bool)
 # test_data[TARGET_COLUMN] = test_predictions.astype(bool)
 
 
-# In[ ]:
+# In[88]:
 
 
 # Create a DataFrame with only the ID_COLUMN and Predictions
@@ -765,32 +903,4 @@ predictions_df.to_csv(f"{DATA_DIR}/predictions.csv", index=False)
 # - Results Presentation:
 #   - Results visualization
 #   - Results interpretation
-# 
-
-# ## TODO 2
-# 
-# 1. Clean data
-#    1. [x] Cabin split /
-#    2. [x] Change types (boolean to int) -> True = 1, False = 0
-#    3. [x] Class variable "Transported" to int
-# 2. Missing values
-#    - [ ] Remove
-#    - [ ] Inpute
-#      - Categorical:
-#        - [ ] Mode
-#        - [ ] Simple
-#        - [ ] Constant MISSING_VALUE
-#      - Numerical:
-#        - [ ] Mean
-#        - [ ] Median
-#        - [ ] KNN
-# 3. Feature engineering
-#    - [ ] Create variable for expenses
-#    - [ ] Create variable for name bag of words
-# 4. Categorical variables to numerical
-#    - [ ] One-hot encoding
-#    - [ ] Ordinal encoding
-# 5. Numerical values scaling
-#    - [ ] Standardization
-#    - [ ] Normalization
 # 

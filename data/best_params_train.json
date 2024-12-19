@@ -1,0 +1,11 @@
+{
+    "classifier": "GradientBoostingClassifier(random_state=42)",
+    "classifier__learning_rate": "0.1",
+    "classifier__n_estimators": "200",
+    "preprocessor__cat_onehot__impute": "SimpleImputer(fill_value='Missing', strategy='constant')",
+    "preprocessor__cat_onehot__onehot": "OneHotEncoder()",
+    "preprocessor__cat_ordinal__impute": "SimpleImputer(fill_value='Missing', strategy='constant')",
+    "preprocessor__cat_ordinal__ordinal": "OrdinalEncoder()",
+    "preprocessor__num__impute": "SimpleImputer(strategy='median')",
+    "preprocessor__num__scale": "StandardScaler()"
+}
