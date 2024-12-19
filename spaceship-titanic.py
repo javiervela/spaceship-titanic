@@ -13,7 +13,7 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[89]:
+# In[1]:
 
 
 import os
@@ -50,7 +50,7 @@ from lightgbm import LGBMClassifier
 from featuretools import EntitySet, dfs
 
 
-# In[90]:
+# In[2]:
 
 
 # Define constants
@@ -69,7 +69,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[91]:
+# In[3]:
 
 
 # Load the data files into pandas dataframes
@@ -80,21 +80,21 @@ test_data = pd.read_csv(TEST_DATA_FILE)
 # ## Data Exploration
 # 
 
-# In[92]:
+# In[4]:
 
 
 print("First few rows of data:")
 print(train_data.head())
 
 
-# In[93]:
+# In[5]:
 
 
 print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[94]:
+# In[6]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -111,7 +111,7 @@ leftover_columns = [
 assert not leftover_columns
 
 
-# In[95]:
+# In[7]:
 
 
 print(f"Numerical columns: {NUMERICAL_COLUMNS}")
@@ -119,7 +119,7 @@ print(f"Categorical columns: {CATEGORICAL_COLUMNS}")
 print(f"Target column: {TARGET_COLUMN}")
 
 
-# In[96]:
+# In[8]:
 
 
 print("\nSummary statistics:")
@@ -138,7 +138,7 @@ for col in CATEGORICAL_COLUMNS:
     print(train_data[col].value_counts())
 
 
-# In[97]:
+# In[9]:
 
 
 train_data
@@ -149,7 +149,7 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[98]:
+# In[10]:
 
 
 def clean_data(data: pd.DataFrame):
@@ -181,7 +181,7 @@ def clean_data(data: pd.DataFrame):
     return data
 
 
-# In[99]:
+# In[11]:
 
 
 # train_data = clean_data(train_data)
@@ -190,7 +190,7 @@ def clean_data(data: pd.DataFrame):
 
 # ## Create Features
 
-# In[100]:
+# In[12]:
 
 
 def create_features(data: pd.DataFrame):
@@ -224,14 +224,14 @@ def create_features(data: pd.DataFrame):
     return data
 
 
-# In[101]:
+# In[13]:
 
 
 # train_data = create_features(train_data)
 # test_data = create_features(test_data)
 
 
-# In[102]:
+# In[14]:
 
 
 pipeline = Pipeline(
@@ -242,7 +242,7 @@ pipeline = Pipeline(
 )
 
 
-# In[103]:
+# In[15]:
 
 
 train_data_transformed_df = pipeline.fit_transform(train_data)
@@ -264,7 +264,7 @@ print(train_data_transformed_df.dtypes)
 # - Scale Numerical Columns
 # 
 
-# In[104]:
+# In[16]:
 
 
 # Combine handling missing values and preprocessing into a single ColumnTransformer
@@ -352,7 +352,7 @@ preprocessor = ColumnTransformer(
 # preprocessor.set_output(transform="pandas")
 
 
-# In[105]:
+# In[17]:
 
 
 pipeline = Pipeline(
@@ -364,7 +364,7 @@ pipeline = Pipeline(
 )
 
 
-# In[106]:
+# In[18]:
 
 
 def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
@@ -404,7 +404,7 @@ def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     return data_transformed_df
 
 
-# In[107]:
+# In[19]:
 
 
 # Use the function to transform the train_data
@@ -417,7 +417,7 @@ train_data_transformed_df = transform_data(train_data, pipeline)
 # - Check if all columns are numerical after preprocessing
 # 
 
-# In[108]:
+# In[20]:
 
 
 # Check for missing values
@@ -428,7 +428,7 @@ print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 assert train_data_transformed_df.isna().sum().sum() == 0
 
 
-# In[109]:
+# In[21]:
 
 
 # Check all columns are numerical
@@ -450,7 +450,7 @@ assert columns_not_numerical == set()
 
 # ## Feature Engineering
 
-# In[110]:
+# In[22]:
 
 
 feature_engineering = Pipeline(
@@ -468,7 +468,7 @@ feature_engineering = Pipeline(
 )
 
 
-# In[111]:
+# In[23]:
 
 
 # Add the feature engineering pipeline to the main pipeline
@@ -482,14 +482,14 @@ pipeline = Pipeline(
 )
 
 
-# In[112]:
+# In[24]:
 
 
 # Use the function to transform the train_data
 train_data_transformed_df = transform_data(train_data, pipeline)
 
 
-# In[113]:
+# In[25]:
 
 
 train_data_transformed_df.columns
@@ -498,7 +498,7 @@ train_data_transformed_df.columns
 # ## Analyze Correlation on Transformed Dataset
 # 
 
-# In[114]:
+# In[26]:
 
 
 corr_matrix = train_data_transformed_df.corr()
@@ -518,7 +518,7 @@ plt.yticks(rotation=0)
 # plt.show()
 
 
-# In[115]:
+# In[27]:
 
 
 # Filter the correlation matrix to only include the Target Column
@@ -535,7 +535,7 @@ plt.title(f"Correlation with {TARGET_COLUMN}")
 # ## Tuning Grids
 # 
 
-# In[116]:
+# In[28]:
 
 
 # Main pipeline
@@ -560,7 +560,7 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[117]:
+# In[29]:
 
 
 preprocessor_grid = {
@@ -581,8 +581,8 @@ preprocessor_grid = {
         OrdinalEncoder(), #
     ],
     "preprocessor__num__impute": [
-        KNNImputer(n_neighbors=1), #
-        KNNImputer(n_neighbors=3), #
+        # KNNImputer(n_neighbors=1), #
+        # KNNImputer(n_neighbors=3), #
         KNNImputer(n_neighbors=5), #
         SimpleImputer(strategy="mean"), #
         SimpleImputer(strategy="median"),
@@ -597,7 +597,7 @@ preprocessor_grid = {
 
 # ## Feature Engineering Grid
 
-# In[132]:
+# In[30]:
 
 
 feature_engineering_grid = {
@@ -607,9 +607,10 @@ feature_engineering_grid = {
         SelectFromModel(LassoCV(cv=5, random_state=RANDOM_SEED)),
         SelectKBest(f_classif, k=10),
         SelectKBest(mutual_info_classif, k=10),
-        SelectKBest(f_classif, k=20),
-        SelectKBest(mutual_info_classif, k=20),
+        # SelectKBest(f_classif, k=20),
+        # SelectKBest(mutual_info_classif, k=20),
         # SelectFromModel(RandomForestClassifier(random_state=RANDOM_SEED), threshold="mean"),
+		"passthrough",
     ]
 }
 
@@ -621,7 +622,7 @@ feature_engineering_grid = {
 # 3 min 45s
 # 
 
-# In[133]:
+# In[31]:
 
 
 model_grids = [
@@ -665,10 +666,10 @@ model_grids = [
         # Gradient Boosting
         "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
         # "classifier__n_estimators": [100, 150, 200, 250, 300, 500],
-        "classifier__n_estimators": [150, 200, 250, 300],
-        "classifier__learning_rate": [0.05, 0.1, 0.15, 0.2],
-        "classifier__max_depth": [3, 5, 7, 9],
-        "classifier__subsample": [0.8, 1.0],
+        "classifier__n_estimators": [100, 150, 200, 250, 300],
+        # "classifier__learning_rate": [0.05, 0.1, 0.15, 0.2],
+        # "classifier__max_depth": [3, 5, 7],
+        # "classifier__subsample": [0.8, 1.0],
     },
     # {
     #     # XGBoost
@@ -691,7 +692,7 @@ model_grids = [
 ]
 
 
-# In[134]:
+# In[32]:
 
 
 # model_grids = [
@@ -718,7 +719,7 @@ model_grids = [
 # ### Final Grid Search
 # 
 
-# In[135]:
+# In[33]:
 
 
 parameter_grids = []
@@ -733,7 +734,7 @@ for m in model_grids:
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[121]:
+# In[34]:
 
 
 # Split the train data into training and validation sets
@@ -745,7 +746,7 @@ X_train, X_val, y_train, y_val = train_test_split(
 )
 
 
-# In[122]:
+# In[35]:
 
 
 # Run experiments
@@ -830,7 +831,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
     return accuracy
 
 
-# In[127]:
+# In[ ]:
 
 
 # Assuming grid_search is your GridSearchCV object
@@ -848,7 +849,7 @@ for rank, (estimator, score) in enumerate(all_estimators_with_scores, start=1):
     print("\n")
 
 
-# In[128]:
+# In[ ]:
 
 
 # Evaluate all estimators in grid search with validation set
@@ -861,7 +862,7 @@ for estimator, _ in all_estimators_with_scores:
 # ## Final Model Training and Submission
 # 
 
-# In[129]:
+# In[ ]:
 
 
 # Retrain the best model on the full training data
