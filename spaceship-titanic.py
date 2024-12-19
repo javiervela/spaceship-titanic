@@ -13,7 +13,7 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[1]:
+# In[89]:
 
 
 import os
@@ -50,7 +50,7 @@ from lightgbm import LGBMClassifier
 from featuretools import EntitySet, dfs
 
 
-# In[2]:
+# In[90]:
 
 
 # Define constants
@@ -69,7 +69,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[3]:
+# In[91]:
 
 
 # Load the data files into pandas dataframes
@@ -80,21 +80,21 @@ test_data = pd.read_csv(TEST_DATA_FILE)
 # ## Data Exploration
 # 
 
-# In[4]:
+# In[92]:
 
 
 print("First few rows of data:")
 print(train_data.head())
 
 
-# In[5]:
+# In[93]:
 
 
 print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[6]:
+# In[94]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -111,7 +111,7 @@ leftover_columns = [
 assert not leftover_columns
 
 
-# In[7]:
+# In[95]:
 
 
 print(f"Numerical columns: {NUMERICAL_COLUMNS}")
@@ -119,7 +119,7 @@ print(f"Categorical columns: {CATEGORICAL_COLUMNS}")
 print(f"Target column: {TARGET_COLUMN}")
 
 
-# In[8]:
+# In[96]:
 
 
 print("\nSummary statistics:")
@@ -138,7 +138,7 @@ for col in CATEGORICAL_COLUMNS:
     print(train_data[col].value_counts())
 
 
-# In[9]:
+# In[97]:
 
 
 train_data
@@ -149,7 +149,7 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[10]:
+# In[98]:
 
 
 def clean_data(data: pd.DataFrame):
@@ -181,7 +181,7 @@ def clean_data(data: pd.DataFrame):
     return data
 
 
-# In[11]:
+# In[99]:
 
 
 # train_data = clean_data(train_data)
@@ -190,7 +190,7 @@ def clean_data(data: pd.DataFrame):
 
 # ## Create Features
 
-# In[12]:
+# In[100]:
 
 
 def create_features(data: pd.DataFrame):
@@ -224,14 +224,14 @@ def create_features(data: pd.DataFrame):
     return data
 
 
-# In[13]:
+# In[101]:
 
 
 # train_data = create_features(train_data)
 # test_data = create_features(test_data)
 
 
-# In[14]:
+# In[102]:
 
 
 pipeline = Pipeline(
@@ -242,7 +242,7 @@ pipeline = Pipeline(
 )
 
 
-# In[15]:
+# In[103]:
 
 
 train_data_transformed_df = pipeline.fit_transform(train_data)
@@ -264,7 +264,7 @@ print(train_data_transformed_df.dtypes)
 # - Scale Numerical Columns
 # 
 
-# In[16]:
+# In[104]:
 
 
 # Combine handling missing values and preprocessing into a single ColumnTransformer
@@ -352,7 +352,7 @@ preprocessor = ColumnTransformer(
 # preprocessor.set_output(transform="pandas")
 
 
-# In[17]:
+# In[105]:
 
 
 pipeline = Pipeline(
@@ -364,7 +364,7 @@ pipeline = Pipeline(
 )
 
 
-# In[58]:
+# In[106]:
 
 
 def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
@@ -404,7 +404,7 @@ def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     return data_transformed_df
 
 
-# In[60]:
+# In[107]:
 
 
 # Use the function to transform the train_data
@@ -417,7 +417,7 @@ train_data_transformed_df = transform_data(train_data, pipeline)
 # - Check if all columns are numerical after preprocessing
 # 
 
-# In[61]:
+# In[108]:
 
 
 # Check for missing values
@@ -428,7 +428,7 @@ print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 assert train_data_transformed_df.isna().sum().sum() == 0
 
 
-# In[66]:
+# In[109]:
 
 
 # Check all columns are numerical
@@ -450,7 +450,7 @@ assert columns_not_numerical == set()
 
 # ## Feature Engineering
 
-# In[67]:
+# In[110]:
 
 
 feature_engineering = Pipeline(
@@ -468,7 +468,7 @@ feature_engineering = Pipeline(
 )
 
 
-# In[68]:
+# In[111]:
 
 
 # Add the feature engineering pipeline to the main pipeline
@@ -482,14 +482,14 @@ pipeline = Pipeline(
 )
 
 
-# In[69]:
+# In[112]:
 
 
 # Use the function to transform the train_data
 train_data_transformed_df = transform_data(train_data, pipeline)
 
 
-# In[70]:
+# In[113]:
 
 
 train_data_transformed_df.columns
@@ -498,7 +498,7 @@ train_data_transformed_df.columns
 # ## Analyze Correlation on Transformed Dataset
 # 
 
-# In[71]:
+# In[114]:
 
 
 corr_matrix = train_data_transformed_df.corr()
@@ -518,7 +518,7 @@ plt.yticks(rotation=0)
 # plt.show()
 
 
-# In[72]:
+# In[115]:
 
 
 # Filter the correlation matrix to only include the Target Column
@@ -535,7 +535,7 @@ plt.title(f"Correlation with {TARGET_COLUMN}")
 # ## Tuning Grids
 # 
 
-# In[73]:
+# In[116]:
 
 
 # Main pipeline
@@ -560,7 +560,7 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[74]:
+# In[117]:
 
 
 preprocessor_grid = {
@@ -570,7 +570,7 @@ preprocessor_grid = {
     ],
     "preprocessor__cat_onehot__onehot": [
         OneHotEncoder(),
-        # OrdinalEncoder(), #
+        OrdinalEncoder(), #
     ],
     "preprocessor__cat_ordinal__impute": [
         SimpleImputer(strategy="most_frequent"), #
@@ -581,10 +581,10 @@ preprocessor_grid = {
         OrdinalEncoder(), #
     ],
     "preprocessor__num__impute": [
-        # KNNImputer(n_neighbors=1), #
-        # KNNImputer(n_neighbors=3), #
-        # KNNImputer(n_neighbors=5), #
-        # SimpleImputer(strategy="mean"), #
+        KNNImputer(n_neighbors=1), #
+        KNNImputer(n_neighbors=3), #
+        KNNImputer(n_neighbors=5), #
+        SimpleImputer(strategy="mean"), #
         SimpleImputer(strategy="median"),
     ],
     "preprocessor__num__scale": [
@@ -595,6 +595,25 @@ preprocessor_grid = {
 }
 
 
+# ## Feature Engineering Grid
+
+# In[132]:
+
+
+feature_engineering_grid = {
+    "feature_engineering__feature_selection": [
+        # RFE(estimator=RandomForestClassifier(random_state=RANDOM_SEED)),
+        # RFE(estimator=RandomForestClassifier(random_state=RANDOM_SEED), n_features_to_select=10),
+        SelectFromModel(LassoCV(cv=5, random_state=RANDOM_SEED)),
+        SelectKBest(f_classif, k=10),
+        SelectKBest(mutual_info_classif, k=10),
+        SelectKBest(f_classif, k=20),
+        SelectKBest(mutual_info_classif, k=20),
+        # SelectFromModel(RandomForestClassifier(random_state=RANDOM_SEED), threshold="mean"),
+    ]
+}
+
+
 # ### Model Grid
 # 
 # 6 + 3 + 6 + 6 + 8 = 29
@@ -602,76 +621,77 @@ preprocessor_grid = {
 # 3 min 45s
 # 
 
-# In[75]:
+# In[133]:
 
 
 model_grids = [
-    {
-        # Logistic Regression
-        "classifier": [LogisticRegression()],
-        # "classifier__C": [0.01, 0.1, 1, 10, 100],
-        # "classifier__penalty": ["l1", "l2"],
-        # "classifier__solver": ["liblinear", "saga"],
-    },
-    {
-        # Decision Tree
-        "classifier": [DecisionTreeClassifier(random_state=RANDOM_SEED)],
-        # "classifier__max_depth": [None, 10, 20, 30],
-        # "classifier__min_samples_split": [2, 5, 10],
-        # "classifier__min_samples_leaf": [1, 2, 4],
-    },
-    {
-        # Random Forest
-        "classifier": [RandomForestClassifier(random_state=RANDOM_SEED)],
-        # "classifier__n_estimators": [100, 200, 300],
-        # "classifier__max_depth": [None, 10, 20, 30],
-        # "classifier__min_samples_split": [2, 5, 10],
-        # "classifier__min_samples_leaf": [1, 2, 4],
-    },
-    {
-        # Support Vector Machine
-        "classifier": [SVC(probability=True)],
-        # "classifier__C": [0.01, 0.1, 1, 10],
-        # "classifier__kernel": ["linear", "rbf", "poly"],
-        # "classifier__gamma": ["scale", "auto"],
-    },
+    # {
+    #     # Logistic Regression
+    #     "classifier": [LogisticRegression()],
+    #     "classifier__C": [0.01, 0.1, 1, 10, 100],
+    #     "classifier__penalty": ["l1", "l2"],
+    #     "classifier__solver": ["liblinear", "saga"],
+    # },
+    # {
+    #     # Decision Tree
+    #     "classifier": [DecisionTreeClassifier(random_state=RANDOM_SEED)],
+    #     "classifier__max_depth": [None, 10, 20, 30],
+    #     "classifier__min_samples_split": [2, 5, 10],
+    #     "classifier__min_samples_leaf": [1, 2, 4],
+    # },
+    # {
+    #     # Random Forest
+    #     "classifier": [RandomForestClassifier(random_state=RANDOM_SEED)],
+    #     "classifier__n_estimators": [100, 200, 300],
+    #     "classifier__max_depth": [None, 10, 20, 30],
+    #     "classifier__min_samples_split": [2, 5, 10],
+    #     "classifier__min_samples_leaf": [1, 2, 4],
+    # },
+    # {
+    #     # K-Nearest Neighbors
+    #     "classifier": [KNeighborsClassifier()],
+    #     "classifier__n_neighbors": [3, 5, 7, 9, 11],
+    #     "classifier__weights": ["uniform", "distance"],
+    #     "classifier__metric": ["euclidean", "manhattan"],
+    # },
+    # {
+    #     # Support Vector Machine
+    #     "classifier": [SVC(probability=True)],
+    #     "classifier__C": [0.01, 0.1, 1, 10],
+    #     "classifier__kernel": ["linear", "rbf", "poly"],
+    #     "classifier__gamma": ["scale", "auto"],
+    # },
     {
         # Gradient Boosting
         "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
-        # "classifier__n_estimators": [100, 250, 500],
-        # "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
-        # "classifier__max_depth": [3, 5, 7],
-        # "classifier__subsample": [0.8, 1.0],
+        # "classifier__n_estimators": [100, 150, 200, 250, 300, 500],
+        "classifier__n_estimators": [150, 200, 250, 300],
+        "classifier__learning_rate": [0.05, 0.1, 0.15, 0.2],
+        "classifier__max_depth": [3, 5, 7, 9],
+        "classifier__subsample": [0.8, 1.0],
     },
-    {
-        # K-Nearest Neighbors
-        "classifier": [KNeighborsClassifier()],
-        # "classifier__n_neighbors": [3, 5, 7, 9, 11],
-        # "classifier__weights": ["uniform", "distance"],
-        # "classifier__metric": ["euclidean", "manhattan"],
-    },
-    {
-        # XGBoost
-        "classifier": [XGBClassifier(random_state=RANDOM_SEED)],
-        # "classifier__n_estimators": [100, 250, 500],
-        # "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
-        # "classifier__max_depth": [3, 6, 9],
-        # "classifier__subsample": [0.8, 1.0],
-        # "classifier__colsample_bytree": [0.8, 1.0],
-    },
-    {
-        # LightGBM
-        "classifier": [LGBMClassifier(random_state=RANDOM_SEED, verbose=-1)],
-        # "classifier__n_estimators": [100, 250, 500],
-        # "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
-        # "classifier__max_depth": [3, 6, 9],
-        # "classifier__subsample": [0.8, 1.0],
-        # "classifier__colsample_bytree": [0.8, 1.0],
-    },
+    # {
+    #     # XGBoost
+    #     "classifier": [XGBClassifier(random_state=RANDOM_SEED)],
+    #     "classifier__n_estimators": [100, 250, 500],
+    #     "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
+    #     "classifier__max_depth": [3, 6, 9],
+    #     "classifier__subsample": [0.8, 1.0],
+    #     "classifier__colsample_bytree": [0.8, 1.0],
+    # },
+    # {
+    #     # LightGBM
+    #     "classifier": [LGBMClassifier(random_state=RANDOM_SEED, verbose=-1)],
+    #     "classifier__n_estimators": [100, 250, 500],
+    #     "classifier__learning_rate": [0.01, 0.05, 0.1, 0.2],
+    #     "classifier__max_depth": [3, 6, 9],
+    #     "classifier__subsample": [0.8, 1.0],
+    #     "classifier__colsample_bytree": [0.8, 1.0],
+    # },
 ]
 
 
-# In[76]:
+# In[134]:
 
 
 # model_grids = [
@@ -698,7 +718,7 @@ model_grids = [
 # ### Final Grid Search
 # 
 
-# In[77]:
+# In[135]:
 
 
 parameter_grids = []
@@ -706,13 +726,14 @@ parameter_grids = []
 for m in model_grids:
     grid = m
     grid.update(preprocessor_grid)
+    grid.update(feature_engineering_grid)
     parameter_grids.append(grid)
 
 
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[78]:
+# In[121]:
 
 
 # Split the train data into training and validation sets
@@ -724,7 +745,7 @@ X_train, X_val, y_train, y_val = train_test_split(
 )
 
 
-# In[79]:
+# In[122]:
 
 
 # Run experiments
@@ -739,7 +760,7 @@ grid_search = GridSearchCV(
 grid_search.fit(X_train, y_train)
 
 
-# In[80]:
+# In[123]:
 
 
 def print_model_parameters(params):
@@ -763,7 +784,7 @@ def print_model_parameters(params):
 # ```
 # 
 
-# In[81]:
+# In[124]:
 
 
 # grid_search.best_estimator_
@@ -772,7 +793,7 @@ print("Best Model:")
 print_model_parameters(best_params)
 
 
-# In[82]:
+# In[125]:
 
 
 # Save the best (in train) model parameters to a JSON file
@@ -788,7 +809,7 @@ with open(best_params_file, "w") as f:
 # ## Best Model Evaluation with Validation Set
 # 
 
-# In[83]:
+# In[126]:
 
 
 def evaluate_model(pipeline, estimator, X_val, y_val):
@@ -809,7 +830,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
     return accuracy
 
 
-# In[84]:
+# In[127]:
 
 
 # Assuming grid_search is your GridSearchCV object
@@ -827,7 +848,7 @@ for rank, (estimator, score) in enumerate(all_estimators_with_scores, start=1):
     print("\n")
 
 
-# In[85]:
+# In[128]:
 
 
 # Evaluate all estimators in grid search with validation set
@@ -840,7 +861,7 @@ for estimator, _ in all_estimators_with_scores:
 # ## Final Model Training and Submission
 # 
 
-# In[86]:
+# In[129]:
 
 
 # Retrain the best model on the full training data
@@ -848,7 +869,7 @@ best_model = grid_search.best_estimator_
 best_model.fit(X, y)
 
 
-# In[87]:
+# In[130]:
 
 
 # Make predictions on the test data
@@ -862,7 +883,7 @@ test_data[TARGET_COLUMN] = y_pred.astype(bool)
 # test_data[TARGET_COLUMN] = test_predictions.astype(bool)
 
 
-# In[88]:
+# In[131]:
 
 
 # Create a DataFrame with only the ID_COLUMN and Predictions
