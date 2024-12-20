@@ -1,9 +1,11 @@
 {
-    "classifier": "LGBMClassifier(random_state=42, verbose=-1)",
-    "preprocessor__cat_onehot__impute": "SimpleImputer(strategy='most_frequent')",
+    "classifier": "GradientBoostingClassifier(random_state=42)",
+    "classifier__n_estimators": "300",
+    "feature_engineering__feature_selection": "passthrough",
+    "preprocessor__cat_onehot__impute": "SimpleImputer(fill_value='Missing', strategy='constant')",
     "preprocessor__cat_onehot__onehot": "OneHotEncoder()",
-    "preprocessor__cat_ordinal__impute": "SimpleImputer(strategy='most_frequent')",
+    "preprocessor__cat_ordinal__impute": "SimpleImputer(fill_value='Missing', strategy='constant')",
     "preprocessor__cat_ordinal__ordinal": "OneHotEncoder()",
-    "preprocessor__num__impute": "SimpleImputer(strategy='median')",
+    "preprocessor__num__impute": "KNNImputer()",
     "preprocessor__num__scale": "StandardScaler()"
 }
