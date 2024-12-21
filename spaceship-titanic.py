@@ -13,7 +13,7 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[1]:
+# In[89]:
 
 
 import os
@@ -25,7 +25,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
-from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif, mutual_info_classif, RFE
+from sklearn.feature_selection import (
+    SelectFromModel,
+    SelectKBest,
+    f_classif,
+    mutual_info_classif,
+    RFE,
+)
 from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.linear_model import LassoCV, LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
@@ -50,7 +56,7 @@ from lightgbm import LGBMClassifier
 from featuretools import EntitySet, dfs
 
 
-# In[2]:
+# In[90]:
 
 
 # Define constants
@@ -69,7 +75,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[3]:
+# In[91]:
 
 
 # Load the data files into pandas dataframes
@@ -80,21 +86,21 @@ test_data = pd.read_csv(TEST_DATA_FILE)
 # ## Data Exploration
 # 
 
-# In[4]:
+# In[92]:
 
 
 print("First few rows of data:")
 print(train_data.head())
 
 
-# In[5]:
+# In[93]:
 
 
 print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[6]:
+# In[94]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -111,7 +117,7 @@ leftover_columns = [
 assert not leftover_columns
 
 
-# In[7]:
+# In[95]:
 
 
 print(f"Numerical columns: {NUMERICAL_COLUMNS}")
@@ -119,7 +125,7 @@ print(f"Categorical columns: {CATEGORICAL_COLUMNS}")
 print(f"Target column: {TARGET_COLUMN}")
 
 
-# In[8]:
+# In[96]:
 
 
 print("\nSummary statistics:")
@@ -138,7 +144,7 @@ for col in CATEGORICAL_COLUMNS:
     print(train_data[col].value_counts())
 
 
-# In[9]:
+# In[97]:
 
 
 train_data
@@ -149,7 +155,7 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[10]:
+# In[98]:
 
 
 def clean_data(data: pd.DataFrame):
@@ -172,16 +178,19 @@ def clean_data(data: pd.DataFrame):
     data.set_index(ID_COLUMN, inplace=True)
 
     # Drop columns
-    data.drop(
-        columns=["Name", "Cabin", "PassengerGroupId", "PassengerIntraGroupId"],
-        inplace=True,
-    )
-
+    for col in [
+        "Name",
+        "Cabin",
+        "PassengerGroupId",
+        "PassengerIntraGroupId",
+    ]:
+        if col in data.columns:
+            data.drop(columns=col, inplace=True)
 
     return data
 
 
-# In[11]:
+# In[99]:
 
 
 # train_data = clean_data(train_data)
@@ -189,8 +198,9 @@ def clean_data(data: pd.DataFrame):
 
 
 # ## Create Features
+# 
 
-# In[12]:
+# In[100]:
 
 
 def create_features(data: pd.DataFrame):
@@ -216,33 +226,35 @@ def create_features(data: pd.DataFrame):
     data["CabinMates"] = data.groupby("Cabin")["Cabin"].transform("count")
 
     # Create new features: Group Id, Group Size, Intra Group Id,
-    data[["PassengerGroupId","PassengerIntraGroupId"]] = data[ID_COLUMN].str.split("_", expand=True)
+    data[["PassengerGroupId", "PassengerIntraGroupId"]] = data[ID_COLUMN].str.split(
+        "_", expand=True
+    )
     data["PassengerGroupSize"] = data.groupby("PassengerGroupId")[
         "PassengerGroupId"
     ].transform("count")
-    
+
     return data
 
 
-# In[13]:
+# In[101]:
 
 
 # train_data = create_features(train_data)
 # test_data = create_features(test_data)
 
 
-# In[14]:
+# In[102]:
 
 
 pipeline = Pipeline(
-	[
-		("create_features", FunctionTransformer(create_features)),
-		("clean_data", FunctionTransformer(clean_data)),
-	]
+    [
+        ("create_features", FunctionTransformer(create_features)),
+        ("clean_data", FunctionTransformer(clean_data)),
+    ]
 )
 
 
-# In[15]:
+# In[103]:
 
 
 train_data_transformed_df = pipeline.fit_transform(train_data)
@@ -264,14 +276,33 @@ print(train_data_transformed_df.dtypes)
 # - Scale Numerical Columns
 # 
 
-# In[16]:
+# In[104]:
+
+
+MAX_CARDINALITY = 4
+
+
+def select_high_cardinality_categorical_features(df: pd.DataFrame):
+    hi_c_cat = df.select_dtypes(include=["object"]).nunique() > MAX_CARDINALITY
+    features = hi_c_cat[hi_c_cat].index.tolist()
+    return features
+
+
+def select_low_cardinality_categorical_features(df: pd.DataFrame):
+    lo_c_cat = df.select_dtypes(include=["object"]).nunique() <= MAX_CARDINALITY
+    features = lo_c_cat[lo_c_cat].index.tolist()
+    return features
+
+
+def select_numerical_features(df: pd.DataFrame):
+    return df.select_dtypes(include=[np.number]).columns.tolist()
 
 
 # Combine handling missing values and preprocessing into a single ColumnTransformer
 preprocessor = ColumnTransformer(
     transformers=[
         (
-            "cat_onehot",
+            "cat_low_cardinality",
             Pipeline(
                 steps=[
                     (
@@ -280,17 +311,17 @@ preprocessor = ColumnTransformer(
                         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
                     ),
                     (
-                        "onehot",
+                        "to_num",
                         OneHotEncoder(),
                         # OrdinalEncoder(),
                         # LabelEncoder(),
                     ),
                 ]
             ),
-            ["HomePlanet", "Destination"],
+            select_low_cardinality_categorical_features,
         ),
         (
-            "cat_ordinal",
+            "cat_high_cardinality",
             Pipeline(
                 steps=[
                     (
@@ -299,14 +330,14 @@ preprocessor = ColumnTransformer(
                         # SimpleImputer(strategy="most_frequent"),
                     ),
                     (
-                        "ordinal",
+                        "to_num",
                         # OneHotEncoder(),
                         OrdinalEncoder(),
                         # LabelEncoder(),
                     ),
                 ]
             ),
-            ["CabinDeck", "CabinSide"],
+            select_high_cardinality_categorical_features,
         ),
         (
             "num",
@@ -328,21 +359,7 @@ preprocessor = ColumnTransformer(
                     ),
                 ]
             ),
-            [
-                "CryoSleep",
-                "Age",
-                "VIP",
-                "RoomService",
-                "FoodCourt",
-                "ShoppingMall",
-                "Spa",
-                "VRDeck",
-                "CabinNumber",
-                "AmountSpentTotal",
-                # "AmountSpentMean",
-				"CabinMates",
-				"PassengerGroupSize",
-            ],
+            select_numerical_features,
         ),
     ],
     remainder="passthrough",
@@ -352,7 +369,7 @@ preprocessor = ColumnTransformer(
 # preprocessor.set_output(transform="pandas")
 
 
-# In[17]:
+# In[105]:
 
 
 pipeline = Pipeline(
@@ -364,37 +381,41 @@ pipeline = Pipeline(
 )
 
 
-# In[18]:
+# In[106]:
 
 
 def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     X = data.drop(columns=[TARGET_COLUMN])
     y = data[TARGET_COLUMN]
-    
+
     # Fit and transform the data using the pipeline
     data_transformed = pipeline.fit_transform(X=X, y=y)
 
     # Extract feature names from the preprocessor step
-    if 'preprocessor' in pipeline.named_steps:
-        feature_names = pipeline.named_steps['preprocessor'].get_feature_names_out()
+    if "preprocessor" in pipeline.named_steps:
+        feature_names = pipeline.named_steps["preprocessor"].get_feature_names_out()
     else:
         feature_names = data.columns
 
     # Extract the selected feature indices from the feature engineering step
-    if 'feature_engineering' in pipeline.named_steps:
-        feature_selector = pipeline.named_steps['feature_engineering'].named_steps['feature_selection']
+    if "feature_engineering" in pipeline.named_steps:
+        feature_selector = pipeline.named_steps["feature_engineering"].named_steps[
+            "feature_selection"
+        ]
         if isinstance(feature_selector, SelectFromModel):
             support_mask = feature_selector.get_support()
         elif isinstance(feature_selector, RFE):
             support_mask = feature_selector.support_
         else:
             support_mask = np.ones(len(feature_names), dtype=bool)
-        selected_feature_names = [name for name, selected in zip(feature_names, support_mask) if selected]
+        selected_feature_names = [
+            name for name, selected in zip(feature_names, support_mask) if selected
+        ]
     else:
         selected_feature_names = feature_names
 
     # Remove prefixes from the column names
-    selected_feature_names = [name.split('__')[-1] for name in selected_feature_names]
+    selected_feature_names = [name.split("__")[-1] for name in selected_feature_names]
 
     # Convert the transformed data back to a DataFrame
     data_transformed_df = pd.DataFrame(data_transformed, columns=selected_feature_names)
@@ -404,7 +425,7 @@ def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     return data_transformed_df
 
 
-# In[19]:
+# In[107]:
 
 
 # Use the function to transform the train_data
@@ -417,7 +438,7 @@ train_data_transformed_df = transform_data(train_data, pipeline)
 # - Check if all columns are numerical after preprocessing
 # 
 
-# In[20]:
+# In[108]:
 
 
 # Check for missing values
@@ -428,7 +449,7 @@ print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 assert train_data_transformed_df.isna().sum().sum() == 0
 
 
-# In[21]:
+# In[109]:
 
 
 # Check all columns are numerical
@@ -438,19 +459,24 @@ all_columns_numerical = train_data_transformed_df.select_dtypes(
 ).columns.tolist()
 all_columns = train_data_transformed_df.columns.tolist()
 
-columns_not_numerical = set(all_columns) - set(all_columns_numerical) - set([TARGET_COLUMN])
+columns_not_numerical = (
+    set(all_columns) - set(all_columns_numerical) - set([TARGET_COLUMN])
+)
 print(f"Columns not numerical: {columns_not_numerical}")
 
 # Output the types of the non-numerical columns
 for col in columns_not_numerical:
-    print(f"Column: {col}, Type: {train_data_transformed_df[col].dtype}, First Value: {train_data_transformed_df[col].iloc[0]}")
+    print(
+        f"Column: {col}, Type: {train_data_transformed_df[col].dtype}, First Value: {train_data_transformed_df[col].iloc[0]}"
+    )
 
 assert columns_not_numerical == set()
 
 
 # ## Feature Engineering
+# 
 
-# In[22]:
+# In[110]:
 
 
 feature_engineering = Pipeline(
@@ -468,28 +494,28 @@ feature_engineering = Pipeline(
 )
 
 
-# In[23]:
+# In[111]:
 
 
 # Add the feature engineering pipeline to the main pipeline
 pipeline = Pipeline(
-	steps=[
-		("create_features", FunctionTransformer(create_features)),
-		("clean_data", FunctionTransformer(clean_data)),
-		("preprocessor", preprocessor),
-		("feature_engineering", feature_engineering),
-	]
+    steps=[
+        ("create_features", FunctionTransformer(create_features)),
+        ("clean_data", FunctionTransformer(clean_data)),
+        ("preprocessor", preprocessor),
+        ("feature_engineering", feature_engineering),
+    ]
 )
 
 
-# In[24]:
+# In[112]:
 
 
 # Use the function to transform the train_data
 train_data_transformed_df = transform_data(train_data, pipeline)
 
 
-# In[25]:
+# In[113]:
 
 
 train_data_transformed_df.columns
@@ -498,7 +524,7 @@ train_data_transformed_df.columns
 # ## Analyze Correlation on Transformed Dataset
 # 
 
-# In[26]:
+# In[114]:
 
 
 corr_matrix = train_data_transformed_df.corr()
@@ -518,7 +544,7 @@ plt.yticks(rotation=0)
 # plt.show()
 
 
-# In[27]:
+# In[115]:
 
 
 # Filter the correlation matrix to only include the Target Column
@@ -535,7 +561,7 @@ plt.title(f"Correlation with {TARGET_COLUMN}")
 # ## Tuning Grids
 # 
 
-# In[28]:
+# In[116]:
 
 
 # Main pipeline
@@ -545,7 +571,7 @@ pipeline = Pipeline(
         ("create_features", FunctionTransformer(create_features)),
         ("clean_data", FunctionTransformer(clean_data)),
         ("preprocessor", preprocessor),
-		("feature_engineering", feature_engineering),
+        ("feature_engineering", feature_engineering),
         ("classifier", "passthrough"),
     ]
 )
@@ -560,30 +586,30 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[29]:
+# In[117]:
 
 
 preprocessor_grid = {
-    "preprocessor__cat_onehot__impute": [
-        SimpleImputer(strategy="most_frequent"), #
+    "preprocessor__cat_low_cardinality__impute": [
+        # SimpleImputer(strategy="most_frequent"), #
         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
     ],
-    "preprocessor__cat_onehot__onehot": [
+    "preprocessor__cat_low_cardinality__to_num": [
         OneHotEncoder(),
         OrdinalEncoder(), #
     ],
-    "preprocessor__cat_ordinal__impute": [
-        SimpleImputer(strategy="most_frequent"), #
+    "preprocessor__cat_high_cardinality__impute": [
+        # SimpleImputer(strategy="most_frequent"), #
         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
     ],
-    "preprocessor__cat_ordinal__ordinal": [
+    "preprocessor__cat_high_cardinality__to_num": [
         OneHotEncoder(),  # TODO works better?
         OrdinalEncoder(), #
     ],
     "preprocessor__num__impute": [
         # KNNImputer(n_neighbors=1), #
-        # KNNImputer(n_neighbors=3), #
-        KNNImputer(n_neighbors=5), #
+        KNNImputer(n_neighbors=3), #
+        KNNImputer(n_neighbors=5),  #
         SimpleImputer(strategy="mean"), #
         SimpleImputer(strategy="median"),
     ],
@@ -595,23 +621,28 @@ preprocessor_grid = {
 }
 
 
-# ## Feature Engineering Grid
+# ### Feature Engineering Grid
+# 
 
-# In[30]:
+# In[118]:
 
 
 feature_engineering_grid = {
+    "create_features": [
+        FunctionTransformer(create_features),
+        # "passthrough",
+    ],
     "feature_engineering__feature_selection": [
         # RFE(estimator=RandomForestClassifier(random_state=RANDOM_SEED)),
         # RFE(estimator=RandomForestClassifier(random_state=RANDOM_SEED), n_features_to_select=10),
         SelectFromModel(LassoCV(cv=5, random_state=RANDOM_SEED)),
-        SelectKBest(f_classif, k=10),
-        SelectKBest(mutual_info_classif, k=10),
+        # SelectKBest(f_classif, k=10),
+        # SelectKBest(mutual_info_classif, k=10),
         # SelectKBest(f_classif, k=20),
         # SelectKBest(mutual_info_classif, k=20),
         # SelectFromModel(RandomForestClassifier(random_state=RANDOM_SEED), threshold="mean"),
-		"passthrough",
-    ]
+        "passthrough",
+    ],
 }
 
 
@@ -622,7 +653,7 @@ feature_engineering_grid = {
 # 3 min 45s
 # 
 
-# In[31]:
+# In[119]:
 
 
 model_grids = [
@@ -662,15 +693,14 @@ model_grids = [
     #     "classifier__kernel": ["linear", "rbf", "poly"],
     #     "classifier__gamma": ["scale", "auto"],
     # },
-    {
-        # Gradient Boosting
-        "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
-        # "classifier__n_estimators": [100, 150, 200, 250, 300, 500],
-        "classifier__n_estimators": [100, 150, 200, 250, 300],
-        # "classifier__learning_rate": [0.05, 0.1, 0.15, 0.2],
-        # "classifier__max_depth": [3, 5, 7],
-        # "classifier__subsample": [0.8, 1.0],
-    },
+    # {
+    #     # Gradient Boosting
+    #     "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
+    #     "classifier__n_estimators": [100, 150, 200, 250, 300, 500],
+    #     "classifier__learning_rate": [0.05, 0.1, 0.15, 0.2],
+    #     "classifier__max_depth": [3, 5, 7],
+    #     "classifier__subsample": [0.8, 1.0],
+    # },
     # {
     #     # XGBoost
     #     "classifier": [XGBClassifier(random_state=RANDOM_SEED)],
@@ -692,34 +722,25 @@ model_grids = [
 ]
 
 
-# In[32]:
+# In[120]:
 
 
-# model_grids = [
-#     {
-#         # Gradient Boosting
-#         "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
-#         "classifier__n_estimators": [200],
-#         "classifier__learning_rate": [0.1],
-#         # "classifier__max_depth": [None, 3, 5, 7],
-#         # "classifier__subsample": [None, 0.8, 1.0],
-#     },
-#     # {
-#     #     # LightGBM
-#     #     "classifier": [LGBMClassifier(random_state=RANDOM_SEED, verbose=-1)],
-#     #     "classifier__n_estimators": [ 500],
-#     #     "classifier__learning_rate": [ 0.1],
-#     #     "classifier__max_depth": [3],
-#     #     "classifier__subsample": [0.8],
-#     #     "classifier__colsample_bytree": [ 1.0],
-#     # },
-# ]
+model_grids = [
+    {
+        # Gradient Boosting
+        "classifier": [GradientBoostingClassifier(random_state=RANDOM_SEED)],
+        "classifier__n_estimators": [200, 250, 300],
+        "classifier__learning_rate": [0.05, 0.1, 0.15],
+        "classifier__max_depth": [1, 3, 5],
+        "classifier__subsample": [0.8, 1.0],
+    },
+]
 
 
 # ### Final Grid Search
 # 
 
-# In[33]:
+# In[121]:
 
 
 parameter_grids = []
@@ -734,19 +755,27 @@ for m in model_grids:
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[34]:
+# In[122]:
+
+
+# # Split the train data into training and validation sets
+# X = train_data.drop(columns=[TARGET_COLUMN])
+# y = train_data[TARGET_COLUMN]
+
+# X_train, X_val, y_train, y_val = train_test_split(
+#     X, y, test_size=VALIDATION_SIZE, random_state=RANDOM_SEED
+# )
+
+
+# In[123]:
 
 
 # Split the train data into training and validation sets
-X = train_data.drop(columns=[TARGET_COLUMN])
-y = train_data[TARGET_COLUMN]
-
-X_train, X_val, y_train, y_val = train_test_split(
-    X, y, test_size=VALIDATION_SIZE, random_state=RANDOM_SEED
-)
+X_train = train_data.drop(columns=[TARGET_COLUMN])
+y_train = train_data[TARGET_COLUMN]
 
 
-# In[35]:
+# In[124]:
 
 
 # Run experiments
@@ -761,7 +790,7 @@ grid_search = GridSearchCV(
 grid_search.fit(X_train, y_train)
 
 
-# In[123]:
+# In[80]:
 
 
 def print_model_parameters(params):
@@ -785,7 +814,10 @@ def print_model_parameters(params):
 # ```
 # 
 
-# In[124]:
+# #### Best model for current execution
+# 
+
+# In[81]:
 
 
 # grid_search.best_estimator_
@@ -794,7 +826,30 @@ print("Best Model:")
 print_model_parameters(best_params)
 
 
-# In[125]:
+# #### All models for current execution
+# 
+
+# In[ ]:
+
+
+# Assuming grid_search is your GridSearchCV object
+all_estimators_with_scores = list(
+    zip(grid_search.cv_results_["params"], grid_search.cv_results_["mean_test_score"])
+)
+
+# Sort the estimators by their scores in descending order
+all_estimators_with_scores.sort(key=lambda x: x[1], reverse=True)
+
+# Print all estimators with their scores and ranking
+for rank, (estimator, score) in enumerate(all_estimators_with_scores, start=1):
+    print(f"Rank: {rank}")
+    print(f"Accuracy: {score}")
+    print("Model:")
+    print_model_parameters(estimator)
+    print("\n")
+
+
+# In[83]:
 
 
 # Save the best (in train) model parameters to a JSON file
@@ -810,13 +865,15 @@ with open(best_params_file, "w") as f:
 # ## Best Model Evaluation with Validation Set
 # 
 
-# In[126]:
+# In[84]:
 
 
 def evaluate_model(pipeline, estimator, X_val, y_val):
     y_pred = pipeline.predict(X_val)
     y_pred_proba = (
-        pipeline.predict_proba(X_val)[:, 1] if hasattr(pipeline, "predict_proba") else None
+        pipeline.predict_proba(X_val)[:, 1]
+        if hasattr(pipeline, "predict_proba")
+        else None
     )
     accuracy = accuracy_score(y_val, y_pred)
     roc_auc = roc_auc_score(y_val, y_pred_proba) if y_pred_proba is not None else None
@@ -834,29 +891,11 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
 # In[ ]:
 
 
-# Assuming grid_search is your GridSearchCV object
-all_estimators_with_scores = list(zip(grid_search.cv_results_['params'], grid_search.cv_results_['mean_test_score']))
-
-# Sort the estimators by their scores in descending order
-all_estimators_with_scores.sort(key=lambda x: x[1], reverse=True)
-
-# Print all estimators with their scores and ranking
-for rank, (estimator, score) in enumerate(all_estimators_with_scores, start=1):
-    print(f"Rank: {rank}")
-    print(f"Accuracy: {score}")
-    print("Model:")
-    print_model_parameters(estimator)
-    print("\n")
-
-
-# In[ ]:
-
-
-# Evaluate all estimators in grid search with validation set
-for estimator, _ in all_estimators_with_scores:
-	pipeline.set_params(**estimator)
-	pipeline.fit(X_train, y_train)
-	score = evaluate_model(pipeline,estimator, X_val, y_val)
+# # Evaluate all estimators in grid search with validation set
+# for estimator, _ in all_estimators_with_scores:
+#     pipeline.set_params(**estimator)
+#     pipeline.fit(X_train, y_train)
+#     score = evaluate_model(pipeline, estimator, X_val, y_val)
 
 
 # ## Final Model Training and Submission
@@ -867,10 +906,11 @@ for estimator, _ in all_estimators_with_scores:
 
 # Retrain the best model on the full training data
 best_model = grid_search.best_estimator_
-best_model.fit(X, y)
+# best_model.fit(X, y)
+best_model.fit(X_train, y_train)
 
 
-# In[130]:
+# In[87]:
 
 
 # Make predictions on the test data
@@ -884,7 +924,7 @@ test_data[TARGET_COLUMN] = y_pred.astype(bool)
 # test_data[TARGET_COLUMN] = test_predictions.astype(bool)
 
 
-# In[131]:
+# In[88]:
 
 
 # Create a DataFrame with only the ID_COLUMN and Predictions
