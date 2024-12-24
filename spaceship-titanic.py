@@ -13,7 +13,7 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[89]:
+# In[247]:
 
 
 import os
@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.compose import ColumnTransformer
+from sklearn.compose import ColumnTransformer, make_column_selector
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.feature_selection import (
     SelectFromModel,
@@ -55,8 +55,13 @@ from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 from featuretools import EntitySet, dfs
 
+import optuna
+from optuna.samplers import TPESampler
 
-# In[90]:
+
+# 
+
+# In[248]:
 
 
 # Define constants
@@ -75,7 +80,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[91]:
+# In[249]:
 
 
 # Load the data files into pandas dataframes
@@ -86,21 +91,21 @@ test_data = pd.read_csv(TEST_DATA_FILE)
 # ## Data Exploration
 # 
 
-# In[92]:
+# In[250]:
 
 
 print("First few rows of data:")
 print(train_data.head())
 
 
-# In[93]:
+# In[251]:
 
 
 print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[94]:
+# In[252]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -117,7 +122,7 @@ leftover_columns = [
 assert not leftover_columns
 
 
-# In[95]:
+# In[253]:
 
 
 print(f"Numerical columns: {NUMERICAL_COLUMNS}")
@@ -125,7 +130,7 @@ print(f"Categorical columns: {CATEGORICAL_COLUMNS}")
 print(f"Target column: {TARGET_COLUMN}")
 
 
-# In[96]:
+# In[254]:
 
 
 print("\nSummary statistics:")
@@ -144,7 +149,7 @@ for col in CATEGORICAL_COLUMNS:
     print(train_data[col].value_counts())
 
 
-# In[97]:
+# In[255]:
 
 
 train_data
@@ -155,7 +160,7 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[98]:
+# In[256]:
 
 
 def clean_data(data: pd.DataFrame):
@@ -190,7 +195,7 @@ def clean_data(data: pd.DataFrame):
     return data
 
 
-# In[99]:
+# In[257]:
 
 
 # train_data = clean_data(train_data)
@@ -200,7 +205,7 @@ def clean_data(data: pd.DataFrame):
 # ## Create Features
 # 
 
-# In[100]:
+# In[258]:
 
 
 def create_features(data: pd.DataFrame):
@@ -213,6 +218,7 @@ def create_features(data: pd.DataFrame):
     ].sum(axis=1, skipna=True)
 
     # Create new feature: Mean money spent in the ship's service
+    # TODO is the same as the other one
     # data["AmountSpentMean"] = data[
     #     ["RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"]
     # ].mean(axis=1, skipna=True)
@@ -236,14 +242,14 @@ def create_features(data: pd.DataFrame):
     return data
 
 
-# In[101]:
+# In[259]:
 
 
 # train_data = create_features(train_data)
 # test_data = create_features(test_data)
 
 
-# In[102]:
+# In[260]:
 
 
 pipeline = Pipeline(
@@ -254,7 +260,7 @@ pipeline = Pipeline(
 )
 
 
-# In[103]:
+# In[261]:
 
 
 train_data_transformed_df = pipeline.fit_transform(train_data)
@@ -276,7 +282,100 @@ print(train_data_transformed_df.dtypes)
 # - Scale Numerical Columns
 # 
 
-# In[104]:
+# In[262]:
+
+
+# MAX_CARDINALITY = 4
+
+
+# def select_high_cardinality_categorical_features(df: pd.DataFrame):
+#     hi_c_cat = df.select_dtypes(include=["object"]).nunique() > MAX_CARDINALITY
+#     features = hi_c_cat[hi_c_cat].index.tolist()
+#     return features
+
+
+# def select_low_cardinality_categorical_features(df: pd.DataFrame):
+#     lo_c_cat = df.select_dtypes(include=["object"]).nunique() <= MAX_CARDINALITY
+#     features = lo_c_cat[lo_c_cat].index.tolist()
+#     return features
+
+
+# def select_numerical_features(df: pd.DataFrame):
+#     return df.select_dtypes(include=[np.number]).columns.tolist()
+
+
+# # Combine handling missing values and preprocessing into a single ColumnTransformer
+# preprocessor = ColumnTransformer(
+#     transformers=[
+#         (
+#             "cat_low_cardinality",
+#             Pipeline(
+#                 steps=[
+#                     (
+#                         "impute",
+#                         # SimpleImputer(strategy="most_frequent"),
+#                         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
+#                     ),
+#                     (
+#                         "to_num",
+#                         OneHotEncoder(),
+#                         # OrdinalEncoder(),
+#                         # LabelEncoder(),
+#                     ),
+#                 ]
+#             ),
+#             select_low_cardinality_categorical_features,
+#         ),
+#         (
+#             "cat_high_cardinality",
+#             Pipeline(
+#                 steps=[
+#                     (
+#                         "impute",
+#                         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
+#                         # SimpleImputer(strategy="most_frequent"),
+#                     ),
+#                     (
+#                         "to_num",
+#                         # OneHotEncoder(),
+#                         OrdinalEncoder(),
+#                         # LabelEncoder(),
+#                     ),
+#                 ]
+#             ),
+#             select_high_cardinality_categorical_features,
+#         ),
+#         (
+#             "num",
+#             Pipeline(
+#                 steps=[
+#                     (
+#                         "impute",
+#                         # KNNImputer(n_neighbors=1),
+#                         # KNNImputer(n_neighbors=3),
+#                         KNNImputer(n_neighbors=5),
+#                         # SimpleImputer(strategy="mean"),
+#                         # SimpleImputer(strategy="median"),
+#                     ),
+#                     (
+#                         "scale",
+#                         StandardScaler(),
+#                         # MinMaxScaler(),
+#                         # RobustScaler(),
+#                     ),
+#                 ]
+#             ),
+#             select_numerical_features,
+#         ),
+#     ],
+#     remainder="passthrough",
+#     # sparse_threshold=0,
+# )
+
+# # preprocessor.set_output(transform="pandas")
+
+
+# In[263]:
 
 
 MAX_CARDINALITY = 4
@@ -302,42 +401,20 @@ def select_numerical_features(df: pd.DataFrame):
 preprocessor = ColumnTransformer(
     transformers=[
         (
-            "cat_low_cardinality",
-            Pipeline(
-                steps=[
-                    (
-                        "impute",
-                        # SimpleImputer(strategy="most_frequent"),
-                        SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
-                    ),
-                    (
-                        "to_num",
-                        OneHotEncoder(),
-                        # OrdinalEncoder(),
-                        # LabelEncoder(),
-                    ),
-                ]
-            ),
-            select_low_cardinality_categorical_features,
-        ),
-        (
-            "cat_high_cardinality",
+            "cat",
             Pipeline(
                 steps=[
                     (
                         "impute",
                         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
-                        # SimpleImputer(strategy="most_frequent"),
                     ),
                     (
                         "to_num",
-                        # OneHotEncoder(),
                         OrdinalEncoder(),
-                        # LabelEncoder(),
                     ),
                 ]
             ),
-            select_high_cardinality_categorical_features,
+            make_column_selector(dtype_include='object'),
         ),
         (
             "num",
@@ -345,31 +422,22 @@ preprocessor = ColumnTransformer(
                 steps=[
                     (
                         "impute",
-                        # KNNImputer(n_neighbors=1),
-                        # KNNImputer(n_neighbors=3),
                         KNNImputer(n_neighbors=5),
-                        # SimpleImputer(strategy="mean"),
-                        # SimpleImputer(strategy="median"),
                     ),
                     (
                         "scale",
                         StandardScaler(),
-                        # MinMaxScaler(),
-                        # RobustScaler(),
                     ),
                 ]
             ),
-            select_numerical_features,
+            make_column_selector(dtype_include='number'),
         ),
     ],
     remainder="passthrough",
-    # sparse_threshold=0,
 )
 
-# preprocessor.set_output(transform="pandas")
 
-
-# In[105]:
+# In[264]:
 
 
 pipeline = Pipeline(
@@ -381,7 +449,7 @@ pipeline = Pipeline(
 )
 
 
-# In[106]:
+# In[265]:
 
 
 def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
@@ -425,7 +493,7 @@ def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     return data_transformed_df
 
 
-# In[107]:
+# In[266]:
 
 
 # Use the function to transform the train_data
@@ -438,7 +506,7 @@ train_data_transformed_df = transform_data(train_data, pipeline)
 # - Check if all columns are numerical after preprocessing
 # 
 
-# In[108]:
+# In[267]:
 
 
 # Check for missing values
@@ -449,7 +517,7 @@ print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 assert train_data_transformed_df.isna().sum().sum() == 0
 
 
-# In[109]:
+# In[268]:
 
 
 # Check all columns are numerical
@@ -476,7 +544,7 @@ assert columns_not_numerical == set()
 # ## Feature Engineering
 # 
 
-# In[110]:
+# In[269]:
 
 
 feature_engineering = Pipeline(
@@ -494,7 +562,7 @@ feature_engineering = Pipeline(
 )
 
 
-# In[111]:
+# In[270]:
 
 
 # Add the feature engineering pipeline to the main pipeline
@@ -508,14 +576,14 @@ pipeline = Pipeline(
 )
 
 
-# In[112]:
+# In[271]:
 
 
 # Use the function to transform the train_data
 train_data_transformed_df = transform_data(train_data, pipeline)
 
 
-# In[113]:
+# In[272]:
 
 
 train_data_transformed_df.columns
@@ -524,7 +592,7 @@ train_data_transformed_df.columns
 # ## Analyze Correlation on Transformed Dataset
 # 
 
-# In[114]:
+# In[273]:
 
 
 corr_matrix = train_data_transformed_df.corr()
@@ -544,7 +612,7 @@ plt.yticks(rotation=0)
 # plt.show()
 
 
-# In[115]:
+# In[274]:
 
 
 # Filter the correlation matrix to only include the Target Column
@@ -561,7 +629,7 @@ plt.title(f"Correlation with {TARGET_COLUMN}")
 # ## Tuning Grids
 # 
 
-# In[116]:
+# In[275]:
 
 
 # Main pipeline
@@ -586,24 +654,52 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[117]:
+# In[276]:
+
+
+# preprocessor_grid = {
+#     "preprocessor__cat_low_cardinality__impute": [
+#         # SimpleImputer(strategy="most_frequent"), #
+#         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
+#     ],
+#     "preprocessor__cat_low_cardinality__to_num": [
+#         OneHotEncoder(),
+#         OrdinalEncoder(), #
+#     ],
+#     "preprocessor__cat_high_cardinality__impute": [
+#         # SimpleImputer(strategy="most_frequent"), #
+#         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
+#     ],
+#     "preprocessor__cat_high_cardinality__to_num": [
+#         OneHotEncoder(),  # TODO works better?
+#         OrdinalEncoder(), #
+#     ],
+#     "preprocessor__num__impute": [
+#         # KNNImputer(n_neighbors=1), #
+#         KNNImputer(n_neighbors=3), #
+#         KNNImputer(n_neighbors=5),  #
+#         SimpleImputer(strategy="mean"), #
+#         SimpleImputer(strategy="median"),
+#     ],
+#     "preprocessor__num__scale": [
+#         "passthrough",
+#         StandardScaler(),
+#         # MinMaxScaler(), #
+#         # RobustScaler(), #
+#     ],
+# }
+
+
+# In[277]:
 
 
 preprocessor_grid = {
-    "preprocessor__cat_low_cardinality__impute": [
-        # SimpleImputer(strategy="most_frequent"), #
+    "preprocessor__cat__impute": [
+        SimpleImputer(strategy="most_frequent"), #
         SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
     ],
-    "preprocessor__cat_low_cardinality__to_num": [
+    "preprocessor__cat__to_num": [
         OneHotEncoder(),
-        OrdinalEncoder(), #
-    ],
-    "preprocessor__cat_high_cardinality__impute": [
-        # SimpleImputer(strategy="most_frequent"), #
-        SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
-    ],
-    "preprocessor__cat_high_cardinality__to_num": [
-        OneHotEncoder(),  # TODO works better?
         OrdinalEncoder(), #
     ],
     "preprocessor__num__impute": [
@@ -614,6 +710,7 @@ preprocessor_grid = {
         SimpleImputer(strategy="median"),
     ],
     "preprocessor__num__scale": [
+        "passthrough",
         StandardScaler(),
         # MinMaxScaler(), #
         # RobustScaler(), #
@@ -624,7 +721,7 @@ preprocessor_grid = {
 # ### Feature Engineering Grid
 # 
 
-# In[118]:
+# In[278]:
 
 
 feature_engineering_grid = {
@@ -653,7 +750,7 @@ feature_engineering_grid = {
 # 3 min 45s
 # 
 
-# In[119]:
+# In[279]:
 
 
 model_grids = [
@@ -722,7 +819,7 @@ model_grids = [
 ]
 
 
-# In[120]:
+# In[280]:
 
 
 model_grids = [
@@ -740,7 +837,7 @@ model_grids = [
 # ### Final Grid Search
 # 
 
-# In[121]:
+# In[281]:
 
 
 parameter_grids = []
@@ -755,7 +852,7 @@ for m in model_grids:
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[122]:
+# In[282]:
 
 
 # # Split the train data into training and validation sets
@@ -767,7 +864,7 @@ for m in model_grids:
 # )
 
 
-# In[123]:
+# In[283]:
 
 
 # Split the train data into training and validation sets
@@ -775,22 +872,186 @@ X_train = train_data.drop(columns=[TARGET_COLUMN])
 y_train = train_data[TARGET_COLUMN]
 
 
-# In[124]:
+# In[284]:
 
 
-# Run experiments
-grid_search = GridSearchCV(
-    estimator=pipeline,
-    param_grid=parameter_grids,
-    cv=5,  # TODO parametrize
-    scoring="accuracy",
-    verbose=1,
-)
+# # Run experiments
+# grid_search = GridSearchCV(
+#     estimator=pipeline,
+#     param_grid=parameter_grids,
+#     cv=5,  # TODO parametrize
+#     scoring="accuracy",
+#     verbose=1,
+# )
 
-grid_search.fit(X_train, y_train)
+# grid_search.fit(X_train, y_train)
 
 
-# In[80]:
+# In[285]:
+
+
+pipeline = Pipeline(
+        steps=[
+            ("create_features", FunctionTransformer(create_features)),
+            ("clean_data", FunctionTransformer(clean_data)),
+            ("preprocessor", preprocessor),
+            ("feature_engineering", feature_engineering),
+            ("classifier", GradientBoostingClassifier(random_state=RANDOM_SEED)),
+        ]
+    )
+
+
+# In[286]:
+
+
+transformers = {
+    "constant": SimpleImputer(strategy="constant", fill_value=MISSING_VALUE),
+    "most_frequent": SimpleImputer(strategy="most_frequent"),
+    "onehot": OneHotEncoder(),
+    "ordinal": OrdinalEncoder(),
+    "knn_3": KNNImputer(n_neighbors=3),
+    "knn_5": KNNImputer(n_neighbors=5),
+    "mean": SimpleImputer(strategy="mean"),
+    "median": SimpleImputer(strategy="median"),
+    "standard": StandardScaler(),
+    "minmax": MinMaxScaler(),
+    "robust": RobustScaler(),
+    "lasso": SelectFromModel(LassoCV(cv=5, random_state=RANDOM_SEED, max_iter=10000)),
+    "passthrough": "passthrough",
+}
+
+
+# In[287]:
+
+
+# def objective(trial):
+#     # Define the hyperparameters to tune
+#     params = {
+#         "classifier__n_estimators": trial.suggest_int("classifier__n_estimators", 200, 300),
+#         "classifier__learning_rate": trial.suggest_float("classifier__learning_rate", 0.05, 0.15),
+#         "classifier__max_depth": trial.suggest_int("classifier__max_depth", 1, 5),
+#         "classifier__subsample": trial.suggest_float("classifier__subsample", 0.8, 1.0),
+#         "preprocessor__cat_low_cardinality__impute": transformers[trial.suggest_categorical(
+#             "preprocessor__cat_low_cardinality__impute", ["constant", "most_frequent"]
+#         )],
+#         "preprocessor__cat_low_cardinality__to_num": transformers[trial.suggest_categorical(
+#             "preprocessor__cat_low_cardinality__to_num", ["onehot", "ordinal"]
+#         )],
+#         "preprocessor__cat_high_cardinality__impute": transformers[trial.suggest_categorical(
+#             "preprocessor__cat_high_cardinality__impute", ["constant", "most_frequent"]
+#         )],
+#         "preprocessor__cat_high_cardinality__to_num": transformers[trial.suggest_categorical(
+#             "preprocessor__cat_high_cardinality__to_num", ["onehot", "ordinal"]
+#         )],
+#         "preprocessor__num__impute": transformers[trial.suggest_categorical(
+#             "preprocessor__num__impute", ["knn_3", "knn_5", "mean", "median"]
+#         )],
+#         "preprocessor__num__scale": transformers[trial.suggest_categorical(
+#             "preprocessor__num__scale", ["standard", "minmax", "robust", "passthrough"]
+#         )],
+#         "feature_engineering__feature_selection": transformers[trial.suggest_categorical(
+#             "feature_engineering__feature_selection", ["lasso", "passthrough"]
+#         )],
+#     }
+
+#     # Update the pipeline with the suggested hyperparameters
+#     pipeline.set_params(**params)
+
+#     # Perform cross-validation
+#     scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring="accuracy")
+#     return scores.mean()
+
+
+# In[288]:
+
+
+import optuna
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+
+def objective(trial):
+    # Define the models to tune
+    model_name = trial.suggest_categorical("classifier", ["LogisticRegression", "RandomForest", "GradientBoosting", "SVC", "KNeighbors"])
+    
+    if model_name == "LogisticRegression":
+        classifier = LogisticRegression(
+            C=trial.suggest_float("classifier__C", 0.01, 10.0),
+            penalty=trial.suggest_categorical("classifier__penalty", ["l1", "l2"]),
+            solver=trial.suggest_categorical("classifier__solver", ["liblinear", "saga"]),
+            random_state=RANDOM_SEED
+        )
+    elif model_name == "RandomForest":
+        classifier = RandomForestClassifier(
+            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
+            max_depth=trial.suggest_int("classifier__max_depth", 1, 30),
+            min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 10),
+            min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 4),
+            random_state=RANDOM_SEED
+        )
+    elif model_name == "GradientBoosting":
+        classifier = GradientBoostingClassifier(
+            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
+            learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
+            max_depth=trial.suggest_int("classifier__max_depth", 1, 10),
+            subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
+            random_state=RANDOM_SEED
+        )
+    elif model_name == "SVC":
+        classifier = SVC(
+            C=trial.suggest_float("classifier__C", 0.01, 10.0),
+            kernel=trial.suggest_categorical("classifier__kernel", ["linear", "rbf", "poly"]),
+            gamma=trial.suggest_categorical("classifier__gamma", ["scale", "auto"]),
+            probability=True,
+            random_state=RANDOM_SEED
+        )
+    elif model_name == "KNeighbors":
+        classifier = KNeighborsClassifier(
+            n_neighbors=trial.suggest_int("classifier__n_neighbors", 3, 11),
+            weights=trial.suggest_categorical("classifier__weights", ["uniform", "distance"]),
+            metric=trial.suggest_categorical("classifier__metric", ["euclidean", "manhattan"])
+        )
+
+    # Define the hyperparameters for the preprocessor and feature engineering
+    params = {
+        "preprocessor__cat__impute": transformers[trial.suggest_categorical(
+            "preprocessor__cat__impute", ["constant", "most_frequent"]
+        )],
+        "preprocessor__cat__to_num": transformers[trial.suggest_categorical(
+            "preprocessor__cat__to_num", ["onehot", "ordinal"]
+        )],
+        "preprocessor__num__impute": transformers[trial.suggest_categorical(
+            "preprocessor__num__impute", ["knn_3", "knn_5", "mean", "median"]
+        )],
+        "preprocessor__num__scale": transformers[trial.suggest_categorical(
+            "preprocessor__num__scale", ["standard", "minmax", "robust", "passthrough"]
+        )],
+        "feature_engineering__feature_selection": transformers[trial.suggest_categorical(
+            "feature_engineering__feature_selection", ["lasso", "passthrough"]
+        )],
+    }
+
+    # Update the pipeline with the suggested hyperparameters
+    pipeline.set_params(classifier=classifier, **params)
+
+    # Perform cross-validation
+    scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring="accuracy")
+    return scores.mean()
+
+
+# In[289]:
+
+
+# N_TRIALS = 1
+N_TRIALS = 5000
+
+# Create a study and optimize the objective function
+study = optuna.create_study(direction="maximize", sampler=TPESampler(seed=RANDOM_SEED))
+study.optimize(objective, n_trials=N_TRIALS)
+
+
+# In[290]:
 
 
 def print_model_parameters(params):
@@ -817,11 +1078,11 @@ def print_model_parameters(params):
 # #### Best model for current execution
 # 
 
-# In[81]:
+# In[291]:
 
 
 # grid_search.best_estimator_
-best_params = grid_search.best_params_
+best_params = study.best_params
 print("Best Model:")
 print_model_parameters(best_params)
 
@@ -829,27 +1090,27 @@ print_model_parameters(best_params)
 # #### All models for current execution
 # 
 
-# In[ ]:
+# In[292]:
 
 
-# Assuming grid_search is your GridSearchCV object
-all_estimators_with_scores = list(
-    zip(grid_search.cv_results_["params"], grid_search.cv_results_["mean_test_score"])
-)
+# # Assuming grid_search is your GridSearchCV object
+# all_estimators_with_scores = list(
+#     zip(grid_search.cv_results_["params"], grid_search.cv_results_["mean_test_score"])
+# )
 
-# Sort the estimators by their scores in descending order
-all_estimators_with_scores.sort(key=lambda x: x[1], reverse=True)
+# # Sort the estimators by their scores in descending order
+# all_estimators_with_scores.sort(key=lambda x: x[1], reverse=True)
 
-# Print all estimators with their scores and ranking
-for rank, (estimator, score) in enumerate(all_estimators_with_scores, start=1):
-    print(f"Rank: {rank}")
-    print(f"Accuracy: {score}")
-    print("Model:")
-    print_model_parameters(estimator)
-    print("\n")
+# # Print all estimators with their scores and ranking
+# for rank, (estimator, score) in enumerate(all_estimators_with_scores, start=1):
+#     print(f"Rank: {rank}")
+#     print(f"Accuracy: {score}")
+#     print("Model:")
+#     print_model_parameters(estimator)
+#     print("\n")
 
 
-# In[83]:
+# In[293]:
 
 
 # Save the best (in train) model parameters to a JSON file
@@ -865,7 +1126,7 @@ with open(best_params_file, "w") as f:
 # ## Best Model Evaluation with Validation Set
 # 
 
-# In[84]:
+# In[294]:
 
 
 def evaluate_model(pipeline, estimator, X_val, y_val):
@@ -888,7 +1149,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
     return accuracy
 
 
-# In[ ]:
+# In[295]:
 
 
 # # Evaluate all estimators in grid search with validation set
@@ -901,21 +1162,28 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
 # ## Final Model Training and Submission
 # 
 
-# In[ ]:
+# In[296]:
 
 
 # Retrain the best model on the full training data
-best_model = grid_search.best_estimator_
-# best_model.fit(X, y)
-best_model.fit(X_train, y_train)
+best_pipeline = pipeline
+
+# Map the string values back to the actual transformer objects
+mapped_params = {
+	key: transformers[value] if value in transformers else value
+	for key, value in study.best_params.items()
+}
+
+best_pipeline.set_params(**mapped_params)
+best_pipeline.fit(X_train, y_train)
 
 
-# In[87]:
+# In[195]:
 
 
 # Make predictions on the test data
 X_test = test_data
-y_pred = best_model.predict(X_test)
+y_pred = best_pipeline.predict(X_test)
 test_data[TARGET_COLUMN] = y_pred.astype(bool)
 
 # Make predictions on the test set with the best model
@@ -924,7 +1192,7 @@ test_data[TARGET_COLUMN] = y_pred.astype(bool)
 # test_data[TARGET_COLUMN] = test_predictions.astype(bool)
 
 
-# In[88]:
+# In[ ]:
 
 
 # Create a DataFrame with only the ID_COLUMN and Predictions
