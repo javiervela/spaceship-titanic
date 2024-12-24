@@ -13,7 +13,7 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[247]:
+# In[132]:
 
 
 import os
@@ -61,7 +61,7 @@ from optuna.samplers import TPESampler
 
 # 
 
-# In[248]:
+# In[133]:
 
 
 # Define constants
@@ -80,7 +80,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[249]:
+# In[134]:
 
 
 # Load the data files into pandas dataframes
@@ -91,21 +91,21 @@ test_data = pd.read_csv(TEST_DATA_FILE)
 # ## Data Exploration
 # 
 
-# In[250]:
+# In[ ]:
 
 
 print("First few rows of data:")
 print(train_data.head())
 
 
-# In[251]:
+# In[ ]:
 
 
 print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[252]:
+# In[137]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -122,7 +122,7 @@ leftover_columns = [
 assert not leftover_columns
 
 
-# In[253]:
+# In[ ]:
 
 
 print(f"Numerical columns: {NUMERICAL_COLUMNS}")
@@ -130,7 +130,7 @@ print(f"Categorical columns: {CATEGORICAL_COLUMNS}")
 print(f"Target column: {TARGET_COLUMN}")
 
 
-# In[254]:
+# In[ ]:
 
 
 print("\nSummary statistics:")
@@ -149,7 +149,7 @@ for col in CATEGORICAL_COLUMNS:
     print(train_data[col].value_counts())
 
 
-# In[255]:
+# In[ ]:
 
 
 train_data
@@ -160,7 +160,7 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[256]:
+# In[141]:
 
 
 def clean_data(data: pd.DataFrame):
@@ -195,7 +195,7 @@ def clean_data(data: pd.DataFrame):
     return data
 
 
-# In[257]:
+# In[142]:
 
 
 # train_data = clean_data(train_data)
@@ -205,7 +205,7 @@ def clean_data(data: pd.DataFrame):
 # ## Create Features
 # 
 
-# In[258]:
+# In[143]:
 
 
 def create_features(data: pd.DataFrame):
@@ -242,14 +242,14 @@ def create_features(data: pd.DataFrame):
     return data
 
 
-# In[259]:
+# In[144]:
 
 
 # train_data = create_features(train_data)
 # test_data = create_features(test_data)
 
 
-# In[260]:
+# In[145]:
 
 
 pipeline = Pipeline(
@@ -260,7 +260,7 @@ pipeline = Pipeline(
 )
 
 
-# In[261]:
+# In[ ]:
 
 
 train_data_transformed_df = pipeline.fit_transform(train_data)
@@ -282,7 +282,7 @@ print(train_data_transformed_df.dtypes)
 # - Scale Numerical Columns
 # 
 
-# In[262]:
+# In[147]:
 
 
 # MAX_CARDINALITY = 4
@@ -375,7 +375,7 @@ print(train_data_transformed_df.dtypes)
 # # preprocessor.set_output(transform="pandas")
 
 
-# In[263]:
+# In[148]:
 
 
 MAX_CARDINALITY = 4
@@ -414,7 +414,7 @@ preprocessor = ColumnTransformer(
                     ),
                 ]
             ),
-            make_column_selector(dtype_include='object'),
+            make_column_selector(dtype_include='object'), # TODO trating categoricals with high carfinality different did not work
         ),
         (
             "num",
@@ -437,7 +437,7 @@ preprocessor = ColumnTransformer(
 )
 
 
-# In[264]:
+# In[149]:
 
 
 pipeline = Pipeline(
@@ -449,7 +449,7 @@ pipeline = Pipeline(
 )
 
 
-# In[265]:
+# In[150]:
 
 
 def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
@@ -493,7 +493,7 @@ def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     return data_transformed_df
 
 
-# In[266]:
+# In[151]:
 
 
 # Use the function to transform the train_data
@@ -506,7 +506,7 @@ train_data_transformed_df = transform_data(train_data, pipeline)
 # - Check if all columns are numerical after preprocessing
 # 
 
-# In[267]:
+# In[ ]:
 
 
 # Check for missing values
@@ -517,7 +517,7 @@ print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 assert train_data_transformed_df.isna().sum().sum() == 0
 
 
-# In[268]:
+# In[ ]:
 
 
 # Check all columns are numerical
@@ -544,7 +544,7 @@ assert columns_not_numerical == set()
 # ## Feature Engineering
 # 
 
-# In[269]:
+# In[154]:
 
 
 feature_engineering = Pipeline(
@@ -562,7 +562,7 @@ feature_engineering = Pipeline(
 )
 
 
-# In[270]:
+# In[155]:
 
 
 # Add the feature engineering pipeline to the main pipeline
@@ -576,14 +576,14 @@ pipeline = Pipeline(
 )
 
 
-# In[271]:
+# In[156]:
 
 
 # Use the function to transform the train_data
 train_data_transformed_df = transform_data(train_data, pipeline)
 
 
-# In[272]:
+# In[ ]:
 
 
 train_data_transformed_df.columns
@@ -592,7 +592,7 @@ train_data_transformed_df.columns
 # ## Analyze Correlation on Transformed Dataset
 # 
 
-# In[273]:
+# In[ ]:
 
 
 corr_matrix = train_data_transformed_df.corr()
@@ -612,7 +612,7 @@ plt.yticks(rotation=0)
 # plt.show()
 
 
-# In[274]:
+# In[ ]:
 
 
 # Filter the correlation matrix to only include the Target Column
@@ -629,7 +629,7 @@ plt.title(f"Correlation with {TARGET_COLUMN}")
 # ## Tuning Grids
 # 
 
-# In[275]:
+# In[160]:
 
 
 # Main pipeline
@@ -654,7 +654,7 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[276]:
+# In[161]:
 
 
 # preprocessor_grid = {
@@ -690,7 +690,7 @@ pipeline = Pipeline(
 # }
 
 
-# In[277]:
+# In[162]:
 
 
 preprocessor_grid = {
@@ -721,7 +721,7 @@ preprocessor_grid = {
 # ### Feature Engineering Grid
 # 
 
-# In[278]:
+# In[163]:
 
 
 feature_engineering_grid = {
@@ -750,7 +750,7 @@ feature_engineering_grid = {
 # 3 min 45s
 # 
 
-# In[279]:
+# In[164]:
 
 
 model_grids = [
@@ -819,7 +819,7 @@ model_grids = [
 ]
 
 
-# In[280]:
+# In[165]:
 
 
 model_grids = [
@@ -837,7 +837,7 @@ model_grids = [
 # ### Final Grid Search
 # 
 
-# In[281]:
+# In[166]:
 
 
 parameter_grids = []
@@ -852,7 +852,7 @@ for m in model_grids:
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[282]:
+# In[167]:
 
 
 # # Split the train data into training and validation sets
@@ -864,7 +864,7 @@ for m in model_grids:
 # )
 
 
-# In[283]:
+# In[168]:
 
 
 # Split the train data into training and validation sets
@@ -872,7 +872,7 @@ X_train = train_data.drop(columns=[TARGET_COLUMN])
 y_train = train_data[TARGET_COLUMN]
 
 
-# In[284]:
+# In[169]:
 
 
 # # Run experiments
@@ -887,7 +887,7 @@ y_train = train_data[TARGET_COLUMN]
 # grid_search.fit(X_train, y_train)
 
 
-# In[285]:
+# In[170]:
 
 
 pipeline = Pipeline(
@@ -901,7 +901,7 @@ pipeline = Pipeline(
     )
 
 
-# In[286]:
+# In[171]:
 
 
 transformers = {
@@ -921,7 +921,7 @@ transformers = {
 }
 
 
-# In[287]:
+# In[172]:
 
 
 # def objective(trial):
@@ -962,86 +962,109 @@ transformers = {
 #     return scores.mean()
 
 
-# In[288]:
+# In[173]:
 
 
-import optuna
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
+import signal
+
+class TimeoutException(Exception):
+    pass
+
+def timeout_handler(signum, frame):
+    raise TimeoutException
 
 def objective(trial):
-    # Define the models to tune
-    model_name = trial.suggest_categorical("classifier", ["LogisticRegression", "RandomForest", "GradientBoosting", "SVC", "KNeighbors"])
-    
-    if model_name == "LogisticRegression":
-        classifier = LogisticRegression(
-            C=trial.suggest_float("classifier__C", 0.01, 10.0),
-            penalty=trial.suggest_categorical("classifier__penalty", ["l1", "l2"]),
-            solver=trial.suggest_categorical("classifier__solver", ["liblinear", "saga"]),
-            random_state=RANDOM_SEED
-        )
-    elif model_name == "RandomForest":
-        classifier = RandomForestClassifier(
-            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
-            max_depth=trial.suggest_int("classifier__max_depth", 1, 30),
-            min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 10),
-            min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 4),
-            random_state=RANDOM_SEED
-        )
-    elif model_name == "GradientBoosting":
-        classifier = GradientBoostingClassifier(
-            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
-            learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_int("classifier__max_depth", 1, 10),
-            subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
-            random_state=RANDOM_SEED
-        )
-    elif model_name == "SVC":
-        classifier = SVC(
-            C=trial.suggest_float("classifier__C", 0.01, 10.0),
-            kernel=trial.suggest_categorical("classifier__kernel", ["linear", "rbf", "poly"]),
-            gamma=trial.suggest_categorical("classifier__gamma", ["scale", "auto"]),
-            probability=True,
-            random_state=RANDOM_SEED
-        )
-    elif model_name == "KNeighbors":
-        classifier = KNeighborsClassifier(
-            n_neighbors=trial.suggest_int("classifier__n_neighbors", 3, 11),
-            weights=trial.suggest_categorical("classifier__weights", ["uniform", "distance"]),
-            metric=trial.suggest_categorical("classifier__metric", ["euclidean", "manhattan"])
-        )
+    # Set the timeout handler
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(120)  # Set the timeout to 2 minutes (120 seconds)
 
-    # Define the hyperparameters for the preprocessor and feature engineering
-    params = {
-        "preprocessor__cat__impute": transformers[trial.suggest_categorical(
-            "preprocessor__cat__impute", ["constant", "most_frequent"]
-        )],
-        "preprocessor__cat__to_num": transformers[trial.suggest_categorical(
-            "preprocessor__cat__to_num", ["onehot", "ordinal"]
-        )],
-        "preprocessor__num__impute": transformers[trial.suggest_categorical(
-            "preprocessor__num__impute", ["knn_3", "knn_5", "mean", "median"]
-        )],
-        "preprocessor__num__scale": transformers[trial.suggest_categorical(
-            "preprocessor__num__scale", ["standard", "minmax", "robust", "passthrough"]
-        )],
-        "feature_engineering__feature_selection": transformers[trial.suggest_categorical(
-            "feature_engineering__feature_selection", ["lasso", "passthrough"]
-        )],
-    }
+    try:
+        # Define the models to tune
+        model_name = trial.suggest_categorical("classifier", ["LogisticRegression", "RandomForest", "GradientBoosting", "SVC", "KNeighbors"])
 
-    # Update the pipeline with the suggested hyperparameters
-    pipeline.set_params(classifier=classifier, **params)
+        if model_name == "LogisticRegression":
+            classifier = LogisticRegression(
+                C=trial.suggest_float("classifier__C", 0.01, 10.0),
+                penalty=trial.suggest_categorical("classifier__penalty", ["l1", "l2"]),
+                solver=trial.suggest_categorical("classifier__solver", ["liblinear", "saga"]),
+                random_state=RANDOM_SEED
+            )
+        elif model_name == "RandomForest":
+            classifier = RandomForestClassifier(
+                n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
+                max_depth=trial.suggest_int("classifier__max_depth", 1, 10),
+                min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 10),
+                min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 4),
+                random_state=RANDOM_SEED
+            )
+        elif model_name == "KNeighbors":
+            classifier = KNeighborsClassifier(
+                n_neighbors=trial.suggest_int("classifier__n_neighbors", 3, 11),
+                weights=trial.suggest_categorical("classifier__weights", ["uniform", "distance"]),
+                metric=trial.suggest_categorical("classifier__metric", ["euclidean", "manhattan"])
+            )
+        elif model_name == "SVC":
+            classifier = SVC(
+                C=trial.suggest_float("classifier__C", 0.01, 10.0),
+                kernel=trial.suggest_categorical("classifier__kernel", ["linear", "rbf", "poly"]),
+                probability=True,
+                random_state=RANDOM_SEED
+            )
+        elif model_name == "GradientBoosting":
+            classifier = GradientBoostingClassifier(
+                n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
+                learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
+                max_depth=trial.suggest_int("classifier__max_depth", 1, 10),
+                subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
+                random_state=RANDOM_SEED
+            )
 
-    # Perform cross-validation
-    scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring="accuracy")
-    return scores.mean()
+        # Define the hyperparameters for the preprocessor and feature engineering
+        params = {
+            "preprocessor__cat__impute": transformers[trial.suggest_categorical(
+                "preprocessor__cat__impute", ["constant", "most_frequent"]
+            )],
+            "preprocessor__cat__to_num": transformers[trial.suggest_categorical(
+                "preprocessor__cat__to_num", ["onehot", "ordinal"]
+            )],
+            "preprocessor__num__impute": transformers[trial.suggest_categorical(
+                "preprocessor__num__impute", ["knn_3", "knn_5", "mean", "median"]
+            )],
+            "preprocessor__num__scale": transformers[trial.suggest_categorical(
+                "preprocessor__num__scale", ["standard", "robust", "passthrough"]
+                # "preprocessor__num__scale", ["standard", "minmax", "robust", "passthrough"]
+            )],
+            "feature_engineering__feature_selection": transformers[trial.suggest_categorical(
+                "feature_engineering__feature_selection", ["lasso", "passthrough"]
+            )],
+        }
+
+        # Update the pipeline with the suggested hyperparameters
+        pipeline.set_params(classifier=classifier, **params)
+
+        # Print the parameters for the current trial
+        print(f"Trial {trial.number}: Starting")
+        for key, value in trial.params.items():
+            print(f"  {key}: {value}")
+
+        # Perform cross-validation
+        scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring="accuracy")
+
+        # Cancel the alarm
+        signal.alarm(0)
+
+        return scores.mean()
+
+    except TimeoutException:
+        print(f"Trial {trial.number}: Timeout")
+        return 0.0  # Return a bad accuracy score if the trial times out
 
 
-# In[289]:
+# In[ ]:
 
+
+# Set logging level to INFO
+optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
 # N_TRIALS = 1
 N_TRIALS = 5000
@@ -1078,7 +1101,7 @@ def print_model_parameters(params):
 # #### Best model for current execution
 # 
 
-# In[291]:
+# In[ ]:
 
 
 # grid_search.best_estimator_
@@ -1162,7 +1185,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
 # ## Final Model Training and Submission
 # 
 
-# In[296]:
+# In[ ]:
 
 
 # Retrain the best model on the full training data
