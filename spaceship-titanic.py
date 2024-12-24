@@ -916,6 +916,7 @@ transformers = {
     "standard": StandardScaler(),
     "minmax": MinMaxScaler(),
     "robust": RobustScaler(),
+	"create_features": FunctionTransformer(create_features),
     "lasso": SelectFromModel(LassoCV(cv=5, random_state=RANDOM_SEED, max_iter=10000)),
     "passthrough": "passthrough",
 }
@@ -962,7 +963,7 @@ transformers = {
 #     return scores.mean()
 
 
-# In[173]:
+# In[1]:
 
 
 import signal
@@ -1033,6 +1034,9 @@ def objective(trial):
             "preprocessor__num__scale": transformers[trial.suggest_categorical(
                 "preprocessor__num__scale", ["standard", "robust", "passthrough"]
                 # "preprocessor__num__scale", ["standard", "minmax", "robust", "passthrough"]
+            )],
+            "feature_engineering__create_features": transformers[trial.suggest_categorical(
+                "feature_engineering__create_features", ["create_features", "passthrough"]
             )],
             "feature_engineering__feature_selection": transformers[trial.suggest_categorical(
                 "feature_engineering__feature_selection", ["lasso", "passthrough"]
