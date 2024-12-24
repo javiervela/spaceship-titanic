@@ -13,7 +13,7 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[132]:
+# In[ ]:
 
 
 import os
@@ -61,7 +61,7 @@ from optuna.samplers import TPESampler
 
 # 
 
-# In[133]:
+# In[4]:
 
 
 # Define constants
@@ -80,7 +80,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[134]:
+# In[5]:
 
 
 # Load the data files into pandas dataframes
@@ -105,7 +105,7 @@ print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[137]:
+# In[8]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -160,7 +160,7 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[141]:
+# In[12]:
 
 
 def clean_data(data: pd.DataFrame):
@@ -195,7 +195,7 @@ def clean_data(data: pd.DataFrame):
     return data
 
 
-# In[142]:
+# In[13]:
 
 
 # train_data = clean_data(train_data)
@@ -205,7 +205,7 @@ def clean_data(data: pd.DataFrame):
 # ## Create Features
 # 
 
-# In[143]:
+# In[14]:
 
 
 def create_features(data: pd.DataFrame):
@@ -242,14 +242,14 @@ def create_features(data: pd.DataFrame):
     return data
 
 
-# In[144]:
+# In[15]:
 
 
 # train_data = create_features(train_data)
 # test_data = create_features(test_data)
 
 
-# In[145]:
+# In[16]:
 
 
 pipeline = Pipeline(
@@ -282,7 +282,7 @@ print(train_data_transformed_df.dtypes)
 # - Scale Numerical Columns
 # 
 
-# In[147]:
+# In[18]:
 
 
 # MAX_CARDINALITY = 4
@@ -375,7 +375,7 @@ print(train_data_transformed_df.dtypes)
 # # preprocessor.set_output(transform="pandas")
 
 
-# In[148]:
+# In[19]:
 
 
 MAX_CARDINALITY = 4
@@ -437,7 +437,7 @@ preprocessor = ColumnTransformer(
 )
 
 
-# In[149]:
+# In[20]:
 
 
 pipeline = Pipeline(
@@ -449,7 +449,7 @@ pipeline = Pipeline(
 )
 
 
-# In[150]:
+# In[21]:
 
 
 def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
@@ -493,7 +493,7 @@ def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     return data_transformed_df
 
 
-# In[151]:
+# In[22]:
 
 
 # Use the function to transform the train_data
@@ -544,7 +544,7 @@ assert columns_not_numerical == set()
 # ## Feature Engineering
 # 
 
-# In[154]:
+# In[25]:
 
 
 feature_engineering = Pipeline(
@@ -562,7 +562,7 @@ feature_engineering = Pipeline(
 )
 
 
-# In[155]:
+# In[26]:
 
 
 # Add the feature engineering pipeline to the main pipeline
@@ -576,7 +576,7 @@ pipeline = Pipeline(
 )
 
 
-# In[156]:
+# In[27]:
 
 
 # Use the function to transform the train_data
@@ -629,7 +629,7 @@ plt.title(f"Correlation with {TARGET_COLUMN}")
 # ## Tuning Grids
 # 
 
-# In[160]:
+# In[31]:
 
 
 # Main pipeline
@@ -654,7 +654,7 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[161]:
+# In[32]:
 
 
 # preprocessor_grid = {
@@ -690,7 +690,7 @@ pipeline = Pipeline(
 # }
 
 
-# In[162]:
+# In[33]:
 
 
 preprocessor_grid = {
@@ -721,7 +721,7 @@ preprocessor_grid = {
 # ### Feature Engineering Grid
 # 
 
-# In[163]:
+# In[34]:
 
 
 feature_engineering_grid = {
@@ -750,7 +750,7 @@ feature_engineering_grid = {
 # 3 min 45s
 # 
 
-# In[164]:
+# In[35]:
 
 
 model_grids = [
@@ -819,7 +819,7 @@ model_grids = [
 ]
 
 
-# In[165]:
+# In[36]:
 
 
 model_grids = [
@@ -837,7 +837,7 @@ model_grids = [
 # ### Final Grid Search
 # 
 
-# In[166]:
+# In[37]:
 
 
 parameter_grids = []
@@ -852,7 +852,7 @@ for m in model_grids:
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[167]:
+# In[38]:
 
 
 # # Split the train data into training and validation sets
@@ -864,7 +864,7 @@ for m in model_grids:
 # )
 
 
-# In[168]:
+# In[39]:
 
 
 # Split the train data into training and validation sets
@@ -872,7 +872,7 @@ X_train = train_data.drop(columns=[TARGET_COLUMN])
 y_train = train_data[TARGET_COLUMN]
 
 
-# In[169]:
+# In[40]:
 
 
 # # Run experiments
@@ -887,7 +887,7 @@ y_train = train_data[TARGET_COLUMN]
 # grid_search.fit(X_train, y_train)
 
 
-# In[170]:
+# In[41]:
 
 
 pipeline = Pipeline(
@@ -901,7 +901,7 @@ pipeline = Pipeline(
     )
 
 
-# In[171]:
+# In[42]:
 
 
 transformers = {
@@ -922,7 +922,7 @@ transformers = {
 }
 
 
-# In[172]:
+# In[43]:
 
 
 # def objective(trial):
@@ -963,7 +963,7 @@ transformers = {
 #     return scores.mean()
 
 
-# In[1]:
+# In[44]:
 
 
 import signal
@@ -1035,8 +1035,8 @@ def objective(trial):
                 "preprocessor__num__scale", ["standard", "robust", "passthrough"]
                 # "preprocessor__num__scale", ["standard", "minmax", "robust", "passthrough"]
             )],
-            "feature_engineering__create_features": transformers[trial.suggest_categorical(
-                "feature_engineering__create_features", ["create_features", "passthrough"]
+            "create_features": transformers[trial.suggest_categorical(
+                "create_features", ["create_features", "passthrough"]
             )],
             "feature_engineering__feature_selection": transformers[trial.suggest_categorical(
                 "feature_engineering__feature_selection", ["lasso", "passthrough"]
