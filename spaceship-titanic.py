@@ -484,7 +484,7 @@ feature_engineering = Pipeline(
         # ("polynomial_features", PolynomialFeatures(degree=2, include_bias=False)),
         # ("feature_selection", RFE(estimator=RandomForestClassifier(random_state=RANDOM_SEED))),
         # ("feature_selection", RFE(estimator=RandomForestClassifier(random_state=RANDOM_SEED), n_features_to_select=10)),
-        ("feature_selection", SelectFromModel(LassoCV(cv=5, random_state=RANDOM_SEED))),
+        ("feature_selection", SelectFromModel(LassoCV(cv=5, random_state=RANDOM_SEED, max_iter=10000))),
         # ("feature_selection", SelectKBest(f_classif, k=10)),
         # ("feature_selection", SelectKBest(mutual_info_classif, k=10)),
         # ("feature_selection", SelectKBest(f_classif, k=20)),

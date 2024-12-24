@@ -1,15 +1,12 @@
 {
-    "classifier": "GradientBoostingClassifier(random_state=42)",
-    "classifier__learning_rate": "0.1",
-    "classifier__max_depth": "3",
-    "classifier__n_estimators": "300",
-    "classifier__subsample": "1.0",
-    "create_features": "FunctionTransformer(func=<function create_features at 0x7c929ba14540>)",
-    "feature_engineering__feature_selection": "passthrough",
-    "preprocessor__cat_high_cardinality__impute": "SimpleImputer(fill_value='Missing', strategy='constant')",
-    "preprocessor__cat_high_cardinality__to_num": "OneHotEncoder()",
-    "preprocessor__cat_low_cardinality__impute": "SimpleImputer(fill_value='Missing', strategy='constant')",
-    "preprocessor__cat_low_cardinality__to_num": "OneHotEncoder()",
-    "preprocessor__num__impute": "KNNImputer()",
-    "preprocessor__num__scale": "StandardScaler()"
+    "classifier": "RandomForest",
+    "classifier__n_estimators": "131",
+    "classifier__max_depth": "2",
+    "classifier__min_samples_split": "9",
+    "classifier__min_samples_leaf": "3",
+    "preprocessor__cat__impute": "constant",
+    "preprocessor__cat__to_num": "onehot",
+    "preprocessor__num__impute": "median",
+    "preprocessor__num__scale": "passthrough",
+    "feature_engineering__feature_selection": "passthrough"
 }
