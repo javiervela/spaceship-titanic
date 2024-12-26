@@ -1009,6 +1009,7 @@ def objective(trial):
                 C=trial.suggest_float("classifier__C", 0.01, 10.0),
                 kernel=trial.suggest_categorical("classifier__kernel", ["linear", "rbf", "poly"]),
                 probability=True,
+                max_iter=1000,
                 random_state=RANDOM_SEED
             )
         elif model_name == "GradientBoosting":
