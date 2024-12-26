@@ -1032,7 +1032,7 @@ def objective(trial):
                 "preprocessor__num__impute", ["knn_3", "knn_5", "mean", "median"]
             )],
             "preprocessor__num__scale": transformers[trial.suggest_categorical(
-                "preprocessor__num__scale", ["standard", "robust", "passthrough"]
+                "preprocessor__num__scale", ["standard", "passthrough"]
                 # "preprocessor__num__scale", ["standard", "minmax", "robust", "passthrough"]
             )],
             "create_features": transformers[trial.suggest_categorical(
