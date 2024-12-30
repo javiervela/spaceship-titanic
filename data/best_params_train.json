@@ -1,12 +1,13 @@
 {
-    "classifier": "RandomForest",
-    "classifier__n_estimators": "131",
-    "classifier__max_depth": "2",
-    "classifier__min_samples_split": "9",
-    "classifier__min_samples_leaf": "3",
+    "classifier": "GradientBoosting",
     "preprocessor__cat__impute": "constant",
     "preprocessor__cat__to_num": "onehot",
-    "preprocessor__num__impute": "median",
+    "preprocessor__num__impute": "knn_5",
     "preprocessor__num__scale": "passthrough",
-    "feature_engineering__feature_selection": "passthrough"
+    "create_features": "passthrough",
+    "feature_engineering__feature_selection": "passthrough",
+    "classifier__n_estimators": "180",
+    "classifier__learning_rate": "0.028898878378800563",
+    "classifier__max_depth": "7",
+    "classifier__subsample": "0.9055838361933857"
 }
