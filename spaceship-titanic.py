@@ -1264,7 +1264,7 @@ def objective(trial, pipeline, classifier_name):
     elif classifier_name == "RandomForest":
         classifier.set_params(
             n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
-            max_depth=trial.suggest_int("classifier__max_depth", -1, 10),
+            max_depth=trial.suggest_categorical("classifier__max_depth", [-1, 5, 10, 20]),
             min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 10),
             min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 4),
         )
@@ -1291,14 +1291,14 @@ def objective(trial, pipeline, classifier_name):
         classifier.set_params(
             n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
             learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_int("classifier__max_depth", -1, 10),
+            max_depth=trial.suggest_categorical("classifier__max_depth", [-1, 5, 10, 20]),
             subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
         )
     elif classifier_name == "XGBoost":
         classifier.set_params(
             n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
             learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_int("classifier__max_depth", -1, 10),
+            max_depth=trial.suggest_categorical("classifier__max_depth", [-1, 5, 10, 20]),
             subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
             colsample_bytree=trial.suggest_float(
                 "classifier__colsample_bytree", 0.8, 1.0
@@ -1308,7 +1308,7 @@ def objective(trial, pipeline, classifier_name):
         classifier.set_params(
             n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
             learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_int("classifier__max_depth", -1, 10),
+            max_depth=trial.suggest_categorical("classifier__max_depth", [-1, 5, 10, 20]),
             subsample=trial.suggest_float("classifier__subsample", 0.7, 1.0),
             colsample_bytree=trial.suggest_float(
                 "classifier__colsample_bytree", 0.8, 1.0
