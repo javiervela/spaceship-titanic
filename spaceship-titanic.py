@@ -1200,28 +1200,28 @@ param_grid = {
     }
 }
 
-param_grid = {
-    "classifier": ["LightGBM"],
-    "preprocessor__cat_low_cardinality__impute": ["most_frequent"],
-    "preprocessor__cat_low_cardinality__to_num": ["onehot"],
-    "preprocessor__cat_high_cardinality__impute": ["most_frequent"],
-    "preprocessor__cat_high_cardinality__to_num": ["ordinal"],
-    "preprocessor__num__impute": ["knn_5"],
-    "preprocessor__num__scale": ["standard"],
-    "create_features": ["create_features"],
-    "feature_engineering__feature_selection": ["lasso"],
-    "create_features__kw_args__use_AmountSpentTotal": [True],
-    "create_features__kw_args__use_CabinDeck": [True],
-    "create_features__kw_args__use_CabinNumber": [False],
-    "create_features__kw_args__use_CabinSide": [False],
-    "create_features__kw_args__use_CabinMates": [True],
-    "create_features__kw_args__use_PassengerGroupSize": [False],
-    "classifier__n_estimators": ["158"],
-    "classifier__learning_rate": ["0.11333262719293624"],
-    "classifier__max_depth": ["2"],
-    "classifier__subsample": ["0.7620188236959264"],
-    "classifier__colsample_bytree": ["0.8358468899985141"],
-}
+# param_grid = {
+#     "classifier": ["LightGBM"],
+#     "preprocessor__cat_low_cardinality__impute": ["most_frequent"],
+#     "preprocessor__cat_low_cardinality__to_num": ["onehot"],
+#     "preprocessor__cat_high_cardinality__impute": ["most_frequent"],
+#     "preprocessor__cat_high_cardinality__to_num": ["ordinal"],
+#     "preprocessor__num__impute": ["knn_5"],
+#     "preprocessor__num__scale": ["standard"],
+#     "create_features": ["create_features"],
+#     "feature_engineering__feature_selection": ["lasso"],
+#     "create_features__kw_args__use_AmountSpentTotal": [True],
+#     "create_features__kw_args__use_CabinDeck": [True],
+#     "create_features__kw_args__use_CabinNumber": [False],
+#     "create_features__kw_args__use_CabinSide": [False],
+#     "create_features__kw_args__use_CabinMates": [True],
+#     "create_features__kw_args__use_PassengerGroupSize": [False],
+#     "classifier__n_estimators": ["158"],
+#     "classifier__learning_rate": ["0.11333262719293624"],
+#     "classifier__max_depth": ["2"],
+#     "classifier__subsample": ["0.7620188236959264"],
+#     "classifier__colsample_bytree": ["0.8358468899985141"],
+# }
 
 # Create a study and optimize the objective function
 study_pipeline = optuna.create_study(
