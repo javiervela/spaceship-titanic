@@ -885,7 +885,7 @@ classifiers = {
     "SVC": SVC(max_iter=10000, random_state=RANDOM_SEED, probability=True),
     "GradientBoosting": GradientBoostingClassifier(random_state=RANDOM_SEED),
     "XGBoost": XGBClassifier(random_state=RANDOM_SEED),
-    "LightGBM": LGBMClassifier(random_state=RANDOM_SEED, verbose=-1),
+    # "LightGBM": LGBMClassifier(random_state=RANDOM_SEED, verbose=-1),
 }
 
 
@@ -1101,7 +1101,7 @@ def objective(trial):
                         "SVC",
                         "KNeighbors",
                         "XGBoost",
-                        "LightGBM"
+                        # "LightGBM"
                     ],
                 )
             ],
@@ -1186,7 +1186,7 @@ def objective(trial):
 
 # Define the parameter grid
 param_grid = {
-    "classifier": ["LogisticRegression", "RandomForest", "GradientBoosting", "SVC", "KNeighbors", "XGBoost", "LightGBM"],
+    "classifier": ["LogisticRegression", "RandomForest", "GradientBoosting", "SVC", "KNeighbors", "XGBoost"], # , "LightGBM"],
     "preprocessor__cat_low_cardinality__impute": ["constant", "most_frequent"],
     "preprocessor__cat_low_cardinality__to_num": ["onehot", "ordinal"],
     "preprocessor__cat_high_cardinality__impute": ["constant", "most_frequent"],
