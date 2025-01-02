@@ -64,7 +64,7 @@ import signal
 
 # 
 
-# In[4]:
+# In[2]:
 
 
 # Define constants
@@ -83,7 +83,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[5]:
+# In[3]:
 
 
 # Load the data files into pandas dataframes
@@ -108,7 +108,7 @@ print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[8]:
+# In[6]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -163,7 +163,7 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[12]:
+# In[10]:
 
 
 def clean_data(data: pd.DataFrame):
@@ -198,7 +198,7 @@ def clean_data(data: pd.DataFrame):
     return data
 
 
-# In[13]:
+# In[11]:
 
 
 # train_data = clean_data(train_data)
@@ -208,7 +208,7 @@ def clean_data(data: pd.DataFrame):
 # ## Create Features
 # 
 
-# In[14]:
+# In[12]:
 
 
 CREATED_FEATURES = [
@@ -273,14 +273,14 @@ def create_features(
     return pd.concat([data, new_data[selected_features]], axis=1)
 
 
-# In[15]:
+# In[13]:
 
 
 # train_data = create_features(train_data)
 # test_data = create_features(test_data)
 
 
-# In[16]:
+# In[14]:
 
 
 pipeline = Pipeline(
@@ -313,7 +313,7 @@ print(train_data_transformed_df.dtypes)
 # - Scale Numerical Columns
 # 
 
-# In[18]:
+# In[16]:
 
 
 MAX_CARDINALITY = 4
@@ -406,7 +406,7 @@ preprocessor = ColumnTransformer(
 # preprocessor.set_output(transform="pandas")
 
 
-# In[19]:
+# In[17]:
 
 
 pipeline = Pipeline(
@@ -418,7 +418,7 @@ pipeline = Pipeline(
 )
 
 
-# In[20]:
+# In[18]:
 
 
 def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
@@ -462,7 +462,7 @@ def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     return data_transformed_df
 
 
-# In[21]:
+# In[19]:
 
 
 # Use the function to transform the train_data
@@ -513,7 +513,7 @@ assert columns_not_numerical == set()
 # ## Feature Engineering
 # 
 
-# In[24]:
+# In[22]:
 
 
 feature_engineering = Pipeline(
@@ -534,7 +534,7 @@ feature_engineering = Pipeline(
 )
 
 
-# In[25]:
+# In[23]:
 
 
 # Add the feature engineering pipeline to the main pipeline
@@ -548,7 +548,7 @@ pipeline = Pipeline(
 )
 
 
-# In[26]:
+# In[24]:
 
 
 # Use the function to transform the train_data
@@ -601,7 +601,7 @@ plt.title(f"Correlation with {TARGET_COLUMN}")
 # ## Tuning Grids
 # 
 
-# In[30]:
+# In[28]:
 
 
 # Main pipeline
@@ -626,7 +626,7 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[31]:
+# In[29]:
 
 
 # preprocessor_grid = {
@@ -662,7 +662,7 @@ pipeline = Pipeline(
 # }
 
 
-# In[32]:
+# In[30]:
 
 
 preprocessor_grid = {
@@ -693,7 +693,7 @@ preprocessor_grid = {
 # ### Feature Engineering Grid
 # 
 
-# In[33]:
+# In[31]:
 
 
 LASSO_CV = 5
@@ -724,7 +724,7 @@ feature_engineering_grid = {
 # 3 min 45s
 # 
 
-# In[34]:
+# In[32]:
 
 
 model_grids = [
@@ -793,7 +793,7 @@ model_grids = [
 ]
 
 
-# In[35]:
+# In[33]:
 
 
 model_grids = [
@@ -811,7 +811,7 @@ model_grids = [
 # ### Final Grid Search
 # 
 
-# In[36]:
+# In[34]:
 
 
 parameter_grids = []
@@ -826,7 +826,7 @@ for m in model_grids:
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[37]:
+# In[35]:
 
 
 # # Split the train data into training and validation sets
@@ -838,7 +838,7 @@ for m in model_grids:
 # )
 
 
-# In[38]:
+# In[36]:
 
 
 # Split the train data into training and validation sets
@@ -846,7 +846,7 @@ X_train = train_data.drop(columns=[TARGET_COLUMN])
 y_train = train_data[TARGET_COLUMN]
 
 
-# In[39]:
+# In[37]:
 
 
 # # Run experiments
@@ -861,7 +861,7 @@ y_train = train_data[TARGET_COLUMN]
 # grid_search.fit(X_train, y_train)
 
 
-# In[40]:
+# In[38]:
 
 
 pipeline = Pipeline(
@@ -875,7 +875,7 @@ pipeline = Pipeline(
 )
 
 
-# In[41]:
+# In[50]:
 
 
 classifiers = {
@@ -885,11 +885,11 @@ classifiers = {
     "SVC": SVC(max_iter=10000, random_state=RANDOM_SEED, probability=True),
     "GradientBoosting": GradientBoostingClassifier(random_state=RANDOM_SEED),
     "XGBoost": XGBClassifier(random_state=RANDOM_SEED),
-    # "LightGBM": LGBMClassifier(random_state=RANDOM_SEED, verbose=-1),
+    "LightGBM": LGBMClassifier(random_state=RANDOM_SEED, verbose=-1),
 }
 
 
-# In[42]:
+# In[40]:
 
 
 transformers = {
@@ -910,7 +910,7 @@ transformers = {
 }
 
 
-# In[43]:
+# In[41]:
 
 
 CV_FOLDS = 5
@@ -922,14 +922,14 @@ N_TRIALS_HYPERPARAMETERS = 1000
 # N_TRIALS_HYPERPARAMETERS = 100
 
 
-# In[44]:
+# In[42]:
 
 
 # Set logging level to INFO
 optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
 
-# In[45]:
+# In[43]:
 
 
 # def objective(trial):
@@ -970,7 +970,7 @@ optuna.logging.set_verbosity(optuna.logging.DEBUG)
 #     return scores.mean()
 
 
-# In[46]:
+# In[44]:
 
 
 # import signal
@@ -1072,7 +1072,7 @@ optuna.logging.set_verbosity(optuna.logging.DEBUG)
 #         return 0.0  # Return a bad accuracy score if the trial times out
 
 
-# In[47]:
+# In[51]:
 
 
 class TimeoutException(Exception):
@@ -1101,7 +1101,7 @@ def objective(trial):
                         "SVC",
                         "KNeighbors",
                         "XGBoost",
-                        # "LightGBM"
+                        "LightGBM"
                     ],
                 )
             ],
@@ -1200,6 +1200,29 @@ param_grid = {
     }
 }
 
+param_grid = {
+    "classifier": ["LightGBM"],
+    "preprocessor__cat_low_cardinality__impute": ["most_frequent"],
+    "preprocessor__cat_low_cardinality__to_num": ["onehot"],
+    "preprocessor__cat_high_cardinality__impute": ["most_frequent"],
+    "preprocessor__cat_high_cardinality__to_num": ["ordinal"],
+    "preprocessor__num__impute": ["knn_5"],
+    "preprocessor__num__scale": ["standard"],
+    "create_features": ["create_features"],
+    "feature_engineering__feature_selection": ["lasso"],
+    "create_features__kw_args__use_AmountSpentTotal": [True],
+    "create_features__kw_args__use_CabinDeck": [True],
+    "create_features__kw_args__use_CabinNumber": [False],
+    "create_features__kw_args__use_CabinSide": [False],
+    "create_features__kw_args__use_CabinMates": [True],
+    "create_features__kw_args__use_PassengerGroupSize": [False],
+    "classifier__n_estimators": ["158"],
+    "classifier__learning_rate": ["0.11333262719293624"],
+    "classifier__max_depth": ["2"],
+    "classifier__subsample": ["0.7620188236959264"],
+    "classifier__colsample_bytree": ["0.8358468899985141"],
+}
+
 # Create a study and optimize the objective function
 study_pipeline = optuna.create_study(
     direction="maximize", sampler= GridSampler(param_grid)
@@ -1207,7 +1230,7 @@ study_pipeline = optuna.create_study(
 study_pipeline.optimize(objective, n_trials=N_TRIALS_PIPELINE)
 
 
-# In[45]:
+# In[54]:
 
 
 def print_model_parameters(params):
@@ -1223,7 +1246,7 @@ print("Best pipeline:")
 print_model_parameters(study_pipeline.best_params)
 
 
-# In[47]:
+# In[56]:
 
 
 # Define the objective function for Optuna
@@ -1241,7 +1264,7 @@ def objective(trial, pipeline, classifier_name):
     elif classifier_name == "RandomForest":
         classifier.set_params(
             n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
-            max_depth=trial.suggest_int("classifier__max_depth", 1, 10),
+            max_depth=trial.suggest_int("classifier__max_depth", -1, 10),
             min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 10),
             min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 4),
         )
@@ -1268,14 +1291,14 @@ def objective(trial, pipeline, classifier_name):
         classifier.set_params(
             n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
             learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_int("classifier__max_depth", 1, 10),
+            max_depth=trial.suggest_int("classifier__max_depth", -1, 10),
             subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
         )
     elif classifier_name == "XGBoost":
         classifier.set_params(
-            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
+            n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
             learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_int("classifier__max_depth", 1, 10),
+            max_depth=trial.suggest_int("classifier__max_depth", -1, 10),
             subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
             colsample_bytree=trial.suggest_float(
                 "classifier__colsample_bytree", 0.8, 1.0
@@ -1283,9 +1306,9 @@ def objective(trial, pipeline, classifier_name):
         )
     elif classifier_name == "LightGBM":
         classifier.set_params(
-            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
+            n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
             learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_int("classifier__max_depth", 1, 10),
+            max_depth=trial.suggest_int("classifier__max_depth", -1, 10),
             subsample=trial.suggest_float("classifier__subsample", 0.7, 1.0),
             colsample_bytree=trial.suggest_float(
                 "classifier__colsample_bytree", 0.8, 1.0
@@ -1303,7 +1326,7 @@ def objective(trial, pipeline, classifier_name):
     return scores.mean()
 
 
-# In[48]:
+# In[57]:
 
 
 # def map_and_set_params(pipeline, study_params):
@@ -1321,7 +1344,7 @@ def objective(trial, pipeline, classifier_name):
 #     return pipeline
 
 
-# In[ ]:
+# In[58]:
 
 
 # Get the best classifier name from the previous study
