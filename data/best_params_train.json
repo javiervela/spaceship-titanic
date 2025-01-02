@@ -14,9 +14,9 @@
     "create_features__kw_args__use_CabinSide": "False",
     "create_features__kw_args__use_CabinMates": "True",
     "create_features__kw_args__use_PassengerGroupSize": "False",
-    "classifier__n_estimators": "158",
-    "classifier__learning_rate": "0.11333262719293624",
-    "classifier__max_depth": "2",
-    "classifier__subsample": "0.7620188236959264",
-    "classifier__colsample_bytree": "0.8358468899985141"
+    "classifier__n_estimators": "155",
+    "classifier__learning_rate": "0.03296137304011128",
+    "classifier__max_depth": "-1",
+    "classifier__subsample": "0.9160454349777262",
+    "classifier__colsample_bytree": "0.9552392988774004"
 }
