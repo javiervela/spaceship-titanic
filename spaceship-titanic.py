@@ -1186,7 +1186,15 @@ def objective(trial):
 
 # Define the parameter grid
 param_grid = {
-    "classifier": ["LogisticRegression", "RandomForest", "GradientBoosting", "SVC", "KNeighbors", "XGBoost"], # , "LightGBM"],
+    "classifier": [
+        # "LogisticRegression",
+        # "RandomForest",
+        "GradientBoosting",
+        # "SVC",
+        # "KNeighbors",
+        # "XGBoost",
+        # "LightGBM",
+    ],
     "preprocessor__cat_low_cardinality__impute": ["constant", "most_frequent"],
     "preprocessor__cat_low_cardinality__to_num": ["onehot", "ordinal"],
     "preprocessor__cat_high_cardinality__impute": ["constant", "most_frequent"],
@@ -1196,8 +1204,9 @@ param_grid = {
     "feature_engineering__feature_selection": ["lasso", "passthrough"],
     "create_features": ["create_features", "passthrough"],
     **{
-        f"create_features__kw_args__use_{feature}": [False, True] for feature in CREATED_FEATURES
-    }
+        f"create_features__kw_args__use_{feature}": [False, True]
+        for feature in CREATED_FEATURES
+    },
 }
 
 # param_grid = {
@@ -1225,7 +1234,7 @@ param_grid = {
 
 # Create a study and optimize the objective function
 study_pipeline = optuna.create_study(
-    direction="maximize", sampler= GridSampler(param_grid)
+    direction="maximize", sampler=GridSampler(param_grid)
 )
 study_pipeline.optimize(objective, n_trials=N_TRIALS_PIPELINE)
 
