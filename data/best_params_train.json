@@ -8,14 +8,18 @@
     "preprocessor__num__scale": "standard",
     "create_features": "create_features",
     "feature_engineering__feature_selection": "lasso",
-    "create_features__kw_args__use_AmountSpentTotal": "False",
+    "create_features__kw_args__use_AmountSpentTotal": "True",
     "create_features__kw_args__use_CabinDeck": "True",
     "create_features__kw_args__use_CabinNumber": "True",
     "create_features__kw_args__use_CabinSide": "True",
     "create_features__kw_args__use_CabinMates": "True",
     "create_features__kw_args__use_PassengerGroupSize": "True",
-    "classifier__n_estimators": "255",
-    "classifier__learning_rate": "0.014624547373465963",
-    "classifier__max_depth": "5",
-    "classifier__subsample": "0.8489800186228256"
+    "classifier__max_depth": "4",
+    "classifier__criterion": "friedman_mse",
+    "classifier__learning_rate": "0.013207297032220256",
+    "classifier__max_features": "None",
+    "classifier__min_samples_leaf": "44",
+    "classifier__min_samples_split": "11",
+    "classifier__n_estimators": "424",
+    "classifier__subsample": "0.8818913987485083"
 }
