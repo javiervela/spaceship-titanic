@@ -884,7 +884,7 @@ classifiers = {
     "KNeighbors": KNeighborsClassifier(),
     "SVC": SVC(max_iter=10000, random_state=RANDOM_SEED, probability=True),
     "GradientBoosting": GradientBoostingClassifier(random_state=RANDOM_SEED),
-    "XGBoost": XGBClassifier(random_state=RANDOM_SEED),
+    # "XGBoost": XGBClassifier(random_state=RANDOM_SEED),
     "LightGBM": LGBMClassifier(random_state=RANDOM_SEED, verbose=-1),
 }
 
@@ -1101,7 +1101,7 @@ def objective(trial):
                         "SVC",
                         "KNeighbors",
                         "XGBoost",
-                        "LightGBM"
+                        "LightGBM",
                     ],
                 )
             ],
@@ -1151,12 +1151,15 @@ def objective(trial):
             ],
         }
         if params["create_features"] != "passthrough":
-            params["create_features"] = FunctionTransformer(create_features, kw_args={
-                f"use_{feature}": trial.suggest_categorical(
-                    f"create_features__kw_args__use_{feature}", [False, True]
-                )
-                for feature in CREATED_FEATURES
-            })
+            params["create_features"] = FunctionTransformer(
+                create_features,
+                kw_args={
+                    f"use_{feature}": trial.suggest_categorical(
+                        f"create_features__kw_args__use_{feature}", [False, True]
+                    )
+                    for feature in CREATED_FEATURES
+                },
+            )
 
         # Update the pipeline with the suggested hyperparameters
         pipeline.set_params(**params)
@@ -1167,7 +1170,9 @@ def objective(trial):
             print(f"  {key}: {value}")
 
         # Perform cross-validation
-        scores = cross_val_score(pipeline, X_train, y_train, cv=CV_FOLDS, scoring="accuracy")
+        scores = cross_val_score(
+            pipeline, X_train, y_train, cv=CV_FOLDS, scoring="accuracy"
+        )
 
         # Cancel the alarm
         signal.alarm(0)
@@ -1200,9 +1205,9 @@ param_grid = {
     "preprocessor__cat_high_cardinality__impute": ["constant", "most_frequent"],
     "preprocessor__cat_high_cardinality__to_num": ["onehot", "ordinal"],
     "preprocessor__num__impute": ["knn_3", "knn_5", "mean", "median"],
-    "preprocessor__num__scale": ["standard", "passthrough"],
+    "preprocessor__num__scale": ["standard"],  # , "passthrough"],
     "feature_engineering__feature_selection": ["lasso", "passthrough"],
-    "create_features": ["create_features", "passthrough"],
+    "create_features": ["create_features"],  # , "passthrough",],
     **{
         f"create_features__kw_args__use_{feature}": [False, True]
         for feature in CREATED_FEATURES
@@ -1262,73 +1267,83 @@ print_model_parameters(study_pipeline.best_params)
 def objective(trial, pipeline, classifier_name):
     classifier = classifiers[classifier_name]
 
-    if classifier_name == "LogisticRegression":
-        classifier.set_params(
-            C=trial.suggest_float("classifier__C", 0.01, 10.0),
-            penalty=trial.suggest_categorical("classifier__penalty", ["l1", "l2"]),
-            solver=trial.suggest_categorical(
-                "classifier__solver", ["liblinear", "saga"]
-            ),
-        )
-    elif classifier_name == "RandomForest":
+    # if classifier_name == "LogisticRegression":
+    #     classifier.set_params(
+    #         C=trial.suggest_float("classifier__C", 0.01, 10.0),
+    #         penalty=trial.suggest_categorical("classifier__penalty", ["l1", "l2"]),
+    #         solver=trial.suggest_categorical(
+    #             "classifier__solver", ["liblinear", "saga"]
+    #         ),
+    #     )
+    # elif classifier_name == "RandomForest":
+    #     classifier.set_params(
+    #         n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
+    #         max_depth=trial.suggest_categorical(
+    #             "classifier__max_depth", [-1, 5, 10, 20]
+    #         ),
+    #         min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 10),
+    #         min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 4),
+    #     )
+    # elif classifier_name == "KNeighbors":
+    #     classifier.set_params(
+    #         n_neighbors=trial.suggest_int("classifier__n_neighbors", 3, 11),
+    #         weights=trial.suggest_categorical(
+    #             "classifier__weights", ["uniform", "distance"]
+    #         ),
+    #         metric=trial.suggest_categorical(
+    #             "classifier__metric", ["euclidean", "manhattan"]
+    #         ),
+    #     )
+    # elif classifier_name == "SVC":
+    #     classifier.set_params(
+    #         C=trial.suggest_float("classifier__C", 0.01, 10.0),
+    #         kernel=trial.suggest_categorical(
+    #             "classifier__kernel", ["linear", "rbf", "poly"]
+    #         ),
+    #         probability=True,
+    #         max_iter=1000,
+    #     )
+    if classifier_name == "GradientBoosting":
         classifier.set_params(
             n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
-            max_depth=trial.suggest_categorical("classifier__max_depth", [-1, 5, 10, 20]),
-            min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 10),
-            min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 4),
-        )
-    elif classifier_name == "KNeighbors":
-        classifier.set_params(
-            n_neighbors=trial.suggest_int("classifier__n_neighbors", 3, 11),
-            weights=trial.suggest_categorical(
-                "classifier__weights", ["uniform", "distance"]
-            ),
-            metric=trial.suggest_categorical(
-                "classifier__metric", ["euclidean", "manhattan"]
-            ),
-        )
-    elif classifier_name == "SVC":
-        classifier.set_params(
-            C=trial.suggest_float("classifier__C", 0.01, 10.0),
-            kernel=trial.suggest_categorical(
-                "classifier__kernel", ["linear", "rbf", "poly"]
-            ),
-            probability=True,
-            max_iter=1000,
-        )
-    elif classifier_name == "GradientBoosting":
-        classifier.set_params(
-            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 300),
             learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_categorical("classifier__max_depth", [-1, 5, 10, 20]),
+            max_depth=trial.suggest_categorical(
+                "classifier__max_depth", [None, 5, 10, 20]
+            ),
             subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
         )
-    elif classifier_name == "XGBoost":
-        classifier.set_params(
-            n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
-            learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_categorical("classifier__max_depth", [-1, 5, 10, 20]),
-            subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
-            colsample_bytree=trial.suggest_float(
-                "classifier__colsample_bytree", 0.8, 1.0
-            ),
-        )
-    elif classifier_name == "LightGBM":
-        classifier.set_params(
-            n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
-            learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-            max_depth=trial.suggest_categorical("classifier__max_depth", [-1, 5, 10, 20]),
-            subsample=trial.suggest_float("classifier__subsample", 0.7, 1.0),
-            colsample_bytree=trial.suggest_float(
-                "classifier__colsample_bytree", 0.8, 1.0
-            ),
-        )
+    # elif classifier_name == "XGBoost":
+    #     classifier.set_params(
+    #         n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
+    #         learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
+    #         max_depth=trial.suggest_categorical(
+    #             "classifier__max_depth", [-1, 5, 10, 20]
+    #         ),
+    #         subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
+    #         colsample_bytree=trial.suggest_float(
+    #             "classifier__colsample_bytree", 0.8, 1.0
+    #         ),
+    #     )
+    # elif classifier_name == "LightGBM":
+    #     classifier.set_params(
+    #         n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
+    #         learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
+    #         max_depth=trial.suggest_categorical(
+    #             "classifier__max_depth", [-1, 5, 10, 20]
+    #         ),
+    #         subsample=trial.suggest_float("classifier__subsample", 0.7, 1.0),
+    #         colsample_bytree=trial.suggest_float(
+    #             "classifier__colsample_bytree", 0.8, 1.0
+    #         ),
+    #     )
 
     # Update the pipeline with the classifier
     pipeline.set_params(classifier=classifier)
 
     # Perform cross-validation
-    scores = cross_val_score(pipeline, X_train, y_train, cv=CV_FOLDS, scoring="accuracy")
+    scores = cross_val_score(
+        pipeline, X_train, y_train, cv=CV_FOLDS, scoring="accuracy"
+    )
 
     trial.set_user_attr("pipeline", pipeline)
 
@@ -1343,7 +1358,7 @@ def objective(trial, pipeline, classifier_name):
 #         key: (
 #             transformers[value]
 #             if value in transformers
-#             else classifiers[value] if key == "classifier" 
+#             else classifiers[value] if key == "classifier"
 #             else value
 #         )
 #         for key, value in study_params.items()
