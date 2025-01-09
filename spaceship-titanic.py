@@ -1417,8 +1417,8 @@ study_hyperparameters = optuna.create_study(
 )
 study_hyperparameters.optimize(
     lambda trial: objective(trial, pipeline, best_classifier_name),
-    # n_trials=N_TRIALS_HYPERPARAMETERS,
-    n_trials=1,
+    n_trials=N_TRIALS_HYPERPARAMETERS,
+    # n_trials=1,
 )
 
 
