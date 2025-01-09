@@ -13,7 +13,7 @@
 # <!-- TODO - `matplotlib` and `seaborn` to plot the data. -->
 # 
 
-# In[1]:
+# In[67]:
 
 
 import os
@@ -64,7 +64,7 @@ import signal
 
 # 
 
-# In[2]:
+# In[68]:
 
 
 # Define constants
@@ -83,7 +83,7 @@ VALIDATION_SIZE = 0.2
 MISSING_VALUE = "Missing"
 
 
-# In[3]:
+# In[69]:
 
 
 # Load the data files into pandas dataframes
@@ -94,21 +94,21 @@ test_data = pd.read_csv(TEST_DATA_FILE)
 # ## Data Exploration
 # 
 
-# In[4]:
+# In[70]:
 
 
 print("First few rows of data:")
 print(train_data.head())
 
 
-# In[5]:
+# In[71]:
 
 
 print("Data columns and types:")
 print(train_data.dtypes)
 
 
-# In[6]:
+# In[72]:
 
 
 NUMERICAL_COLUMNS = train_data.select_dtypes(include=[np.number]).columns.tolist()
@@ -125,7 +125,7 @@ leftover_columns = [
 assert not leftover_columns
 
 
-# In[7]:
+# In[73]:
 
 
 print(f"Numerical columns: {NUMERICAL_COLUMNS}")
@@ -133,7 +133,7 @@ print(f"Categorical columns: {CATEGORICAL_COLUMNS}")
 print(f"Target column: {TARGET_COLUMN}")
 
 
-# In[8]:
+# In[74]:
 
 
 categorical_columns = CATEGORICAL_COLUMNS.copy()
@@ -150,7 +150,7 @@ for col in categorical_columns:
     plt.close()
 
 
-# In[9]:
+# In[75]:
 
 
 print("\nSummary statistics:")
@@ -169,7 +169,7 @@ for col in CATEGORICAL_COLUMNS:
     print(train_data[col].value_counts())
 
 
-# In[10]:
+# In[76]:
 
 
 train_data
@@ -180,7 +180,7 @@ train_data
 # We need to clean the train and test datasets the same way
 # 
 
-# In[11]:
+# In[77]:
 
 
 def clean_data(data: pd.DataFrame):
@@ -215,7 +215,7 @@ def clean_data(data: pd.DataFrame):
     return data
 
 
-# In[12]:
+# In[78]:
 
 
 # train_data = clean_data(train_data)
@@ -225,7 +225,7 @@ def clean_data(data: pd.DataFrame):
 # ## Create Features
 # 
 
-# In[13]:
+# In[79]:
 
 
 CREATED_FEATURES = [
@@ -290,14 +290,14 @@ def create_features(
     return pd.concat([data, new_data[selected_features]], axis=1)
 
 
-# In[14]:
+# In[80]:
 
 
 # train_data = create_features(train_data)
 # test_data = create_features(test_data)
 
 
-# In[15]:
+# In[81]:
 
 
 pipeline = Pipeline(
@@ -308,7 +308,7 @@ pipeline = Pipeline(
 )
 
 
-# In[16]:
+# In[82]:
 
 
 train_data_transformed_df = pipeline.fit_transform(train_data)
@@ -330,7 +330,7 @@ print(train_data_transformed_df.dtypes)
 # - Scale Numerical Columns
 # 
 
-# In[17]:
+# In[83]:
 
 
 MAX_CARDINALITY = 4
@@ -423,7 +423,7 @@ preprocessor = ColumnTransformer(
 # preprocessor.set_output(transform="pandas")
 
 
-# In[18]:
+# In[84]:
 
 
 pipeline = Pipeline(
@@ -435,7 +435,7 @@ pipeline = Pipeline(
 )
 
 
-# In[19]:
+# In[85]:
 
 
 def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
@@ -479,7 +479,7 @@ def transform_data(data: pd.DataFrame, pipeline: Pipeline) -> pd.DataFrame:
     return data_transformed_df
 
 
-# In[20]:
+# In[86]:
 
 
 # Use the function to transform the train_data
@@ -492,7 +492,7 @@ train_data_transformed_df = transform_data(train_data, pipeline)
 # - Check if all columns are numerical after preprocessing
 # 
 
-# In[21]:
+# In[87]:
 
 
 # Check for missing values
@@ -503,7 +503,7 @@ print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 assert train_data_transformed_df.isna().sum().sum() == 0
 
 
-# In[22]:
+# In[88]:
 
 
 # Check all columns are numerical
@@ -530,7 +530,7 @@ assert columns_not_numerical == set()
 # ## Feature Engineering
 # 
 
-# In[23]:
+# In[89]:
 
 
 feature_engineering = Pipeline(
@@ -551,7 +551,7 @@ feature_engineering = Pipeline(
 )
 
 
-# In[24]:
+# In[90]:
 
 
 # Add the feature engineering pipeline to the main pipeline
@@ -565,14 +565,14 @@ pipeline = Pipeline(
 )
 
 
-# In[25]:
+# In[91]:
 
 
 # Use the function to transform the train_data
 train_data_transformed_df = transform_data(train_data, pipeline)
 
 
-# In[26]:
+# In[92]:
 
 
 train_data_transformed_df.columns
@@ -581,7 +581,7 @@ train_data_transformed_df.columns
 # ## Analyze Correlation on Transformed Dataset
 # 
 
-# In[27]:
+# In[93]:
 
 
 corr_matrix = train_data_transformed_df.corr()
@@ -601,7 +601,7 @@ plt.yticks(rotation=0)
 # plt.show()
 
 
-# In[28]:
+# In[94]:
 
 
 # Filter the correlation matrix to only include the Target Column
@@ -618,7 +618,7 @@ plt.title(f"Correlation with {TARGET_COLUMN}")
 # ## Tuning Grids
 # 
 
-# In[29]:
+# In[95]:
 
 
 # Main pipeline
@@ -643,7 +643,7 @@ pipeline = Pipeline(
 # 11 min 51 s
 # 
 
-# In[30]:
+# In[96]:
 
 
 # preprocessor_grid = {
@@ -679,7 +679,7 @@ pipeline = Pipeline(
 # }
 
 
-# In[31]:
+# In[97]:
 
 
 preprocessor_grid = {
@@ -710,7 +710,7 @@ preprocessor_grid = {
 # ### Feature Engineering Grid
 # 
 
-# In[32]:
+# In[98]:
 
 
 LASSO_CV = 5
@@ -741,7 +741,7 @@ feature_engineering_grid = {
 # 3 min 45s
 # 
 
-# In[33]:
+# In[99]:
 
 
 model_grids = [
@@ -810,7 +810,7 @@ model_grids = [
 ]
 
 
-# In[34]:
+# In[100]:
 
 
 model_grids = [
@@ -828,7 +828,7 @@ model_grids = [
 # ### Final Grid Search
 # 
 
-# In[35]:
+# In[101]:
 
 
 parameter_grids = []
@@ -843,7 +843,7 @@ for m in model_grids:
 # ## Model Training and Parameter Grid Search
 # 
 
-# In[36]:
+# In[102]:
 
 
 # # Split the train data into training and validation sets
@@ -855,7 +855,7 @@ for m in model_grids:
 # )
 
 
-# In[37]:
+# In[103]:
 
 
 # Split the train data into training and validation sets
@@ -863,7 +863,7 @@ X_train = train_data.drop(columns=[TARGET_COLUMN])
 y_train = train_data[TARGET_COLUMN]
 
 
-# In[38]:
+# In[104]:
 
 
 # # Run experiments
@@ -878,7 +878,7 @@ y_train = train_data[TARGET_COLUMN]
 # grid_search.fit(X_train, y_train)
 
 
-# In[39]:
+# In[105]:
 
 
 pipeline = Pipeline(
@@ -892,7 +892,7 @@ pipeline = Pipeline(
 )
 
 
-# In[40]:
+# In[106]:
 
 
 classifiers = {
@@ -906,7 +906,7 @@ classifiers = {
 }
 
 
-# In[41]:
+# In[107]:
 
 
 transformers = {
@@ -927,7 +927,7 @@ transformers = {
 }
 
 
-# In[42]:
+# In[108]:
 
 
 CV_FOLDS = 5
@@ -935,18 +935,18 @@ CV_FOLDS = 5
 N_TRIALS_PIPELINE = 50000
 # N_TRIALS_PIPELINE = 100
 
-N_TRIALS_HYPERPARAMETERS = 500
+N_TRIALS_HYPERPARAMETERS = 1000
 # N_TRIALS_HYPERPARAMETERS = 100
 
 
-# In[43]:
+# In[109]:
 
 
 # Set logging level to INFO
 optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
 
-# In[44]:
+# In[110]:
 
 
 # def objective(trial):
@@ -987,7 +987,7 @@ optuna.logging.set_verbosity(optuna.logging.DEBUG)
 #     return scores.mean()
 
 
-# In[45]:
+# In[111]:
 
 
 # import signal
@@ -1089,7 +1089,7 @@ optuna.logging.set_verbosity(optuna.logging.DEBUG)
 #         return 0.0  # Return a bad accuracy score if the trial times out
 
 
-# In[46]:
+# In[112]:
 
 
 class TimeoutException(Exception):
@@ -1203,7 +1203,7 @@ def objective(trial):
         return 0.0  # Return a bad accuracy score if the trial times out
 
 
-# In[48]:
+# In[113]:
 
 
 # Define the parameter grid
@@ -1229,7 +1229,8 @@ param_grid = {
     #     f"create_features__kw_args__use_{feature}": [False, True]
     #     for feature in CREATED_FEATURES
     # },
-    "create_features__kw_args__use_AmountSpentTotal": [False],
+    # "create_features__kw_args__use_AmountSpentTotal": [False], # TODO the very best was with False
+    "create_features__kw_args__use_AmountSpentTotal": [True],
     "create_features__kw_args__use_CabinDeck": [True],
     "create_features__kw_args__use_CabinNumber": [True],
     "create_features__kw_args__use_CabinSide": [True],
@@ -1267,7 +1268,7 @@ study_pipeline = optuna.create_study(
 study_pipeline.optimize(objective, n_trials=N_TRIALS_PIPELINE)
 
 
-# In[49]:
+# In[114]:
 
 
 def print_model_parameters(params):
@@ -1275,7 +1276,7 @@ def print_model_parameters(params):
         print(f"  {k:<50}: {v}")
 
 
-# In[50]:
+# In[115]:
 
 
 # Show best pipeline
@@ -1283,7 +1284,7 @@ print("Best pipeline:")
 print_model_parameters(study_pipeline.best_params)
 
 
-# In[51]:
+# In[116]:
 
 
 # Define the objective function for Optuna
@@ -1326,24 +1327,21 @@ def objective(trial, pipeline, classifier_name):
     #         probability=True,
     #         max_iter=1000,
     #     )
-    # if classifier_name == "GradientBoosting":
-    #     classifier.set_params(
-    #         n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
-    #         learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.2),
-    #         max_depth=trial.suggest_categorical(
-    #             "classifier__max_depth", [None, 1, 3, 5, 10, 20]
-    #         ),
-    #         subsample=trial.suggest_float("classifier__subsample", 0.8, 1.0),
-    #     )
-    GradientBoostingClassifier
     if classifier_name == "GradientBoosting":
+        MAX_DEPTH = 20
+        max_depth = trial.suggest_int("classifier__max_depth", 1, MAX_DEPTH)
         classifier.set_params(
-            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 100),
-            learning_rate=trial.suggest_float("classifier__learning_rate", 0.1, 0.1),
-            max_depth=trial.suggest_categorical(
-                "classifier__max_depth", [3]
-            ),
-            subsample=trial.suggest_float("classifier__subsample", 1.0, 1.0),
+            n_estimators=trial.suggest_int("classifier__n_estimators", 50, 300),
+            learning_rate=trial.suggest_float("classifier__learning_rate", 0.05, 0.25, log=True),
+            max_depth=max_depth if max_depth != MAX_DEPTH else None,
+            subsample=trial.suggest_float("classifier__subsample", 0.75, 1.0),
+            min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 20),
+            min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 10),
+            max_features=trial.suggest_categorical("classifier__max_features", ["auto", "sqrt", "log2"]),
+            max_leaf_nodes=trial.suggest_int("classifier__max_leaf_nodes", 10, 100) if max_depth == MAX_DEPTH else None,
+            min_weight_fraction_leaf=trial.suggest_float("classifier__min_weight_fraction_leaf", 0.0, 0.5),
+            validation_fraction=trial.suggest_float("classifier__validation_fraction", 0.1, 0.5),
+            n_iter_no_change=trial.suggest_int("classifier__n_iter_no_change", 5, 20),
         )
     # elif classifier_name == "XGBoost":
     #     classifier.set_params(
@@ -1383,7 +1381,7 @@ def objective(trial, pipeline, classifier_name):
     return scores.mean()
 
 
-# In[57]:
+# In[117]:
 
 
 # def map_and_set_params(pipeline, study_params):
@@ -1401,7 +1399,7 @@ def objective(trial, pipeline, classifier_name):
 #     return pipeline
 
 
-# In[52]:
+# In[118]:
 
 
 # Get the best classifier name from the previous study
@@ -1410,7 +1408,7 @@ best_classifier_name = study_pipeline.best_params["classifier"]
 best_pipeline = study_pipeline.best_trial.user_attrs["pipeline"]
 
 
-# In[55]:
+# In[119]:
 
 
 # Create a study and optimize the objective function
@@ -1419,11 +1417,12 @@ study_hyperparameters = optuna.create_study(
 )
 study_hyperparameters.optimize(
     lambda trial: objective(trial, pipeline, best_classifier_name),
+    # n_trials=N_TRIALS_HYPERPARAMETERS,
     n_trials=1,
 )
 
 
-# In[56]:
+# In[120]:
 
 
 # Print the best hyperparameters
@@ -1450,7 +1449,7 @@ print_model_parameters(study_hyperparameters.best_params)
 # #### Best model for current execution
 # 
 
-# In[57]:
+# In[121]:
 
 
 # grid_search.best_estimator_
@@ -1462,7 +1461,7 @@ print_model_parameters(best_params)
 # #### All models for current execution
 # 
 
-# In[58]:
+# In[122]:
 
 
 # # Assuming grid_search is your GridSearchCV object
@@ -1482,25 +1481,23 @@ print_model_parameters(best_params)
 #     print("\n")
 
 
-# In[59]:
+# In[123]:
 
 
-# TODO skip
+# Save the best (in train) model parameters to a JSON file
+best_params_file = f"{DATA_DIR}/best_params_train.json"
 
-# # Save the best (in train) model parameters to a JSON file
-# best_params_file = f"{DATA_DIR}/best_params_train.json"
+# Convert non-serializable objects to their string representations
+serializable_best_params = {k: str(v) for k, v in best_params.items()}
 
-# # Convert non-serializable objects to their string representations
-# serializable_best_params = {k: str(v) for k, v in best_params.items()}
-
-# with open(best_params_file, "w") as f:
-#     json.dump(serializable_best_params, f, indent=4)
+with open(best_params_file, "w") as f:
+    json.dump(serializable_best_params, f, indent=4)
 
 
 # ## Best Model Evaluation with Validation Set
 # 
 
-# In[60]:
+# In[124]:
 
 
 def evaluate_model(pipeline, estimator, X_val, y_val):
@@ -1523,7 +1520,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
     return accuracy
 
 
-# In[61]:
+# In[125]:
 
 
 # # Evaluate all estimators in grid search with validation set
@@ -1536,7 +1533,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
 # ## Final Model Training and Submission
 # 
 
-# In[62]:
+# In[126]:
 
 
 # best_pipeline = map_and_set_params(pipeline, best_params)
@@ -1545,7 +1542,7 @@ best_pipeline = study_hyperparameters.best_trial.user_attrs["pipeline"]
 best_pipeline.fit(X_train, y_train)
 
 
-# In[63]:
+# In[127]:
 
 
 # Make predictions on the test data
@@ -1559,7 +1556,7 @@ test_data[TARGET_COLUMN] = y_pred.astype(bool)
 # test_data[TARGET_COLUMN] = test_predictions.astype(bool)
 
 
-# In[64]:
+# In[128]:
 
 
 # Create a DataFrame with only the ID_COLUMN and Predictions
