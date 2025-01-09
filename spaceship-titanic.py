@@ -94,14 +94,14 @@ test_data = pd.read_csv(TEST_DATA_FILE)
 # ## Data Exploration
 # 
 
-# In[70]:
+# In[ ]:
 
 
 print("First few rows of data:")
 print(train_data.head())
 
 
-# In[71]:
+# In[ ]:
 
 
 print("Data columns and types:")
@@ -125,7 +125,7 @@ leftover_columns = [
 assert not leftover_columns
 
 
-# In[73]:
+# In[ ]:
 
 
 print(f"Numerical columns: {NUMERICAL_COLUMNS}")
@@ -133,7 +133,7 @@ print(f"Categorical columns: {CATEGORICAL_COLUMNS}")
 print(f"Target column: {TARGET_COLUMN}")
 
 
-# In[74]:
+# In[ ]:
 
 
 categorical_columns = CATEGORICAL_COLUMNS.copy()
@@ -150,7 +150,7 @@ for col in categorical_columns:
     plt.close()
 
 
-# In[75]:
+# In[ ]:
 
 
 print("\nSummary statistics:")
@@ -169,7 +169,7 @@ for col in CATEGORICAL_COLUMNS:
     print(train_data[col].value_counts())
 
 
-# In[76]:
+# In[ ]:
 
 
 train_data
@@ -308,7 +308,7 @@ pipeline = Pipeline(
 )
 
 
-# In[82]:
+# In[ ]:
 
 
 train_data_transformed_df = pipeline.fit_transform(train_data)
@@ -492,7 +492,7 @@ train_data_transformed_df = transform_data(train_data, pipeline)
 # - Check if all columns are numerical after preprocessing
 # 
 
-# In[87]:
+# In[ ]:
 
 
 # Check for missing values
@@ -503,7 +503,7 @@ print(pd.DataFrame(train_data_transformed_df.isna().sum()).T)
 assert train_data_transformed_df.isna().sum().sum() == 0
 
 
-# In[88]:
+# In[ ]:
 
 
 # Check all columns are numerical
@@ -572,7 +572,7 @@ pipeline = Pipeline(
 train_data_transformed_df = transform_data(train_data, pipeline)
 
 
-# In[92]:
+# In[ ]:
 
 
 train_data_transformed_df.columns
@@ -581,7 +581,7 @@ train_data_transformed_df.columns
 # ## Analyze Correlation on Transformed Dataset
 # 
 
-# In[93]:
+# In[ ]:
 
 
 corr_matrix = train_data_transformed_df.corr()
@@ -601,7 +601,7 @@ plt.yticks(rotation=0)
 # plt.show()
 
 
-# In[94]:
+# In[ ]:
 
 
 # Filter the correlation matrix to only include the Target Column
@@ -1203,7 +1203,7 @@ def objective(trial):
         return 0.0  # Return a bad accuracy score if the trial times out
 
 
-# In[113]:
+# In[ ]:
 
 
 # Define the parameter grid
@@ -1276,7 +1276,7 @@ def print_model_parameters(params):
         print(f"  {k:<50}: {v}")
 
 
-# In[115]:
+# In[ ]:
 
 
 # Show best pipeline
@@ -1408,7 +1408,7 @@ best_classifier_name = study_pipeline.best_params["classifier"]
 best_pipeline = study_pipeline.best_trial.user_attrs["pipeline"]
 
 
-# In[119]:
+# In[ ]:
 
 
 # Create a study and optimize the objective function
@@ -1422,7 +1422,7 @@ study_hyperparameters.optimize(
 )
 
 
-# In[120]:
+# In[ ]:
 
 
 # Print the best hyperparameters
@@ -1449,7 +1449,7 @@ print_model_parameters(study_hyperparameters.best_params)
 # #### Best model for current execution
 # 
 
-# In[121]:
+# In[ ]:
 
 
 # grid_search.best_estimator_
@@ -1533,7 +1533,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
 # ## Final Model Training and Submission
 # 
 
-# In[126]:
+# In[ ]:
 
 
 # best_pipeline = map_and_set_params(pipeline, best_params)
@@ -1556,7 +1556,7 @@ test_data[TARGET_COLUMN] = y_pred.astype(bool)
 # test_data[TARGET_COLUMN] = test_predictions.astype(bool)
 
 
-# In[128]:
+# In[ ]:
 
 
 # Create a DataFrame with only the ID_COLUMN and Predictions
