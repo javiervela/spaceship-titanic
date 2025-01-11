@@ -937,7 +937,7 @@ CV_FOLDS = 5
 N_TRIALS_PIPELINE = 50000
 # N_TRIALS_PIPELINE = 100
 
-N_TRIALS_HYPERPARAMETERS = 1000
+N_TRIALS_HYPERPARAMETERS = 10000
 
 
 # In[43]:
@@ -1581,7 +1581,7 @@ study = optuna.create_study(
 )
 study.optimize(
     lambda trial: objective(trial),
-    n_trials=1,
+    n_trials=N_TRIALS_HYPERPARAMETERS,
     # n_trials=1,
 )
 
