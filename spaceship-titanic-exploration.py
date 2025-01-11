@@ -1204,7 +1204,7 @@ def objective(trial):
         return 0.0  # Return a bad accuracy score if the trial times out
 
 
-# In[ ]:
+# In[47]:
 
 
 # Define the parameter grid
@@ -1261,11 +1261,12 @@ param_grid = {
 #     "classifier__colsample_bytree": ["0.8358468899985141"],
 # }
 
-# Create a study and optimize the objective function
-study_pipeline = optuna.create_study(
-    direction="maximize", sampler=GridSampler(param_grid)
-)
-study_pipeline.optimize(objective, n_trials=N_TRIALS_PIPELINE)
+# TODO
+# # Create a study and optimize the objective function
+# study_pipeline = optuna.create_study(
+#     direction="maximize", sampler=GridSampler(param_grid)
+# )
+# study_pipeline.optimize(objective, n_trials=N_TRIALS_PIPELINE)
 
 
 # In[48]:
@@ -1279,12 +1280,12 @@ def print_model_parameters(params):
 # In[ ]:
 
 
-# Show best pipeline
-print("Best pipeline:")
-print_model_parameters(study_pipeline.best_params)
+# # Show best pipeline
+# print("Best pipeline:")
+# print_model_parameters(study_pipeline.best_params)
 
 
-# In[50]:
+# In[51]:
 
 
 # Define the objective function for Optuna
@@ -1379,7 +1380,7 @@ def objective(trial, pipeline, classifier_name):
     return scores.mean()
 
 
-# In[51]:
+# In[52]:
 
 
 # def map_and_set_params(pipeline, study_params):
@@ -1397,35 +1398,38 @@ def objective(trial, pipeline, classifier_name):
 #     return pipeline
 
 
-# In[52]:
+# In[53]:
 
 
-# Get the best classifier name from the previous study
-best_classifier_name = study_pipeline.best_params["classifier"]
-# best_pipeline = map_and_set_params(pipeline, study_pipeline.best_params)
-best_pipeline = study_pipeline.best_trial.user_attrs["pipeline"]
+# TODO
+
+# # Get the best classifier name from the previous study
+# best_classifier_name = study_pipeline.best_params["classifier"]
+# # best_pipeline = map_and_set_params(pipeline, study_pipeline.best_params)
+# best_pipeline = study_pipeline.best_trial.user_attrs["pipeline"]
 
 
-# In[ ]:
+# In[54]:
 
 
-# Create a study and optimize the objective function
-study_hyperparameters = optuna.create_study(
-    direction="maximize", sampler=TPESampler(seed=RANDOM_SEED)
-)
-study_hyperparameters.optimize(
-    lambda trial: objective(trial, pipeline, best_classifier_name),
-    n_trials=N_TRIALS_HYPERPARAMETERS,
-    # n_trials=1,
-)
+# TODO
+# # Create a study and optimize the objective function
+# study_hyperparameters = optuna.create_study(
+#     direction="maximize", sampler=TPESampler(seed=RANDOM_SEED)
+# )
+# study_hyperparameters.optimize(
+#     lambda trial: objective(trial, pipeline, best_classifier_name),
+#     n_trials=N_TRIALS_HYPERPARAMETERS,
+#     # n_trials=1,
+# )
 
 
-# In[ ]:
+# In[55]:
 
 
-# Print the best hyperparameters
-print("Best hyperparameters from second study:")
-print_model_parameters(study_hyperparameters.best_params)
+# # Print the best hyperparameters
+# print("Best hyperparameters from second study:")
+# print_model_parameters(study_hyperparameters.best_params)
 
 
 # #### Best so far
@@ -1444,6 +1448,144 @@ print_model_parameters(study_hyperparameters.best_params)
 # ```
 # 
 
+# In[56]:
+
+
+class TimeoutException(Exception):
+    pass
+
+
+def timeout_handler(signum, frame):
+    raise TimeoutException
+
+
+def objective(trial):
+    # Set the timeout handler
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(180)  # Set the timeout to 3 minutes (180 seconds)
+
+    try:
+        # Define the hyperparameters for the preprocessor and feature engineering
+        params = {
+            "preprocessor__cat_low_cardinality__impute": transformers[
+                trial.suggest_categorical(
+                    "preprocessor__cat_low_cardinality__impute",
+                    ["constant", "most_frequent"],
+                )
+            ],
+            "preprocessor__cat_low_cardinality__to_num": transformers[
+                trial.suggest_categorical(
+                    "preprocessor__cat_low_cardinality__to_num", ["onehot", "ordinal"]
+                )
+            ],
+            "preprocessor__cat_high_cardinality__impute": transformers[
+                trial.suggest_categorical(
+                    "preprocessor__cat_high_cardinality__impute",
+                    ["constant", "most_frequent"],
+                )
+            ],
+            "preprocessor__cat_high_cardinality__to_num": transformers[
+                trial.suggest_categorical(
+                    "preprocessor__cat_high_cardinality__to_num", ["onehot", "ordinal"]
+                )
+            ],
+            "preprocessor__num__impute": transformers[
+                trial.suggest_categorical(
+                    "preprocessor__num__impute", ["knn_3", "knn_5", "mean", "median"]
+                )
+            ],
+            "preprocessor__num__scale": transformers[
+                trial.suggest_categorical(
+                    "preprocessor__num__scale",
+                    ["standard", "passthrough"],
+                )
+            ],
+            "create_features": transformers[
+                trial.suggest_categorical(
+                    "create_features", ["create_features", "passthrough"]
+                )
+            ],
+            "feature_engineering__feature_selection": transformers[
+                trial.suggest_categorical(
+                    "feature_engineering__feature_selection", ["lasso", "passthrough"]
+                )
+            ],
+        }
+        if params["create_features"] != "passthrough":
+            params["create_features"] = FunctionTransformer(
+                create_features,
+                kw_args={
+                    f"use_{feature}": trial.suggest_categorical(
+                        f"create_features__kw_args__use_{feature}", [False, True]
+                    )
+                    for feature in CREATED_FEATURES
+                },
+            )
+        
+        classifier = GradientBoostingClassifier(random_state=RANDOM_SEED)
+        
+        MAX_DEPTH = 10
+        max_depth = trial.suggest_int("classifier__max_depth", 1, MAX_DEPTH)
+        classifier.set_params(
+            criterion=trial.suggest_categorical("classifier__criterion", ["friedman_mse", "squared_error"]),
+            learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.3, log=True),
+            max_depth=max_depth if max_depth != MAX_DEPTH else None,
+            # max_features=trial.suggest_categorical("classifier__max_features", [None, "sqrt", "log2"]),
+            # min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 50),
+            # min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 50),
+            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 1000, log=True),
+            subsample=trial.suggest_float("classifier__subsample", 0.7, 1.0, step=0.1),
+        )
+
+        # Update the pipeline with the suggested hyperparameters
+        pipeline.set_params(**params)
+
+        # Update the pipeline with the classifier
+        pipeline.set_params(classifier=classifier)
+
+        # Perform cross-validation
+        scores = cross_val_score(
+            pipeline, X_train, y_train, cv=CV_FOLDS, scoring="accuracy"
+        )
+
+        trial.set_user_attr("pipeline", pipeline)
+
+        # Print the parameters for the current trial
+        print(f"Trial {trial.number}: Starting")
+        for key, value in trial.params.items():
+            print(f"  {key}: {value}")
+
+        # Perform cross-validation
+        scores = cross_val_score(
+            pipeline, X_train, y_train, cv=CV_FOLDS, scoring="accuracy"
+        )
+
+        # Cancel the alarm
+        signal.alarm(0)
+
+        trial.set_user_attr("pipeline", pipeline)
+
+        return scores.mean()
+
+    except TimeoutException:
+        print(f"Trial {trial.number}: Timeout")
+        return 0.0  # Return a bad accuracy score if the trial times out
+
+
+# In[ ]:
+
+
+# Create a study and optimize the objective function
+study = optuna.create_study(
+    direction="maximize", sampler=TPESampler(seed=RANDOM_SEED)
+)
+study.optimize(
+    lambda trial: objective(trial),
+    n_trials=1,
+    # n_trials=1,
+)
+
+
 # #### Best model for current execution
 # 
 
@@ -1451,7 +1593,8 @@ print_model_parameters(study_hyperparameters.best_params)
 
 
 # grid_search.best_estimator_
-best_params = study_pipeline.best_params | study_hyperparameters.best_params
+best_params = study.best_params
+# best_params = study_pipeline.best_params | study_hyperparameters.best_params
 print("Best Model:")
 print_model_parameters(best_params)
 
@@ -1459,7 +1602,7 @@ print_model_parameters(best_params)
 # #### All models for current execution
 # 
 
-# In[122]:
+# In[61]:
 
 
 # # Assuming grid_search is your GridSearchCV object
@@ -1479,7 +1622,7 @@ print_model_parameters(best_params)
 #     print("\n")
 
 
-# In[123]:
+# In[62]:
 
 
 # Save the best (in train) model parameters to a JSON file
@@ -1495,7 +1638,7 @@ with open(best_params_file, "w") as f:
 # ## Best Model Evaluation with Validation Set
 # 
 
-# In[124]:
+# In[63]:
 
 
 def evaluate_model(pipeline, estimator, X_val, y_val):
@@ -1518,7 +1661,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
     return accuracy
 
 
-# In[125]:
+# In[64]:
 
 
 # # Evaluate all estimators in grid search with validation set
@@ -1535,7 +1678,7 @@ def evaluate_model(pipeline, estimator, X_val, y_val):
 
 
 # best_pipeline = map_and_set_params(pipeline, best_params)
-best_pipeline = study_hyperparameters.best_trial.user_attrs["pipeline"]
+best_pipeline = study.best_trial.user_attrs["pipeline"]
 
 best_pipeline.fit(X_train, y_train)
 
