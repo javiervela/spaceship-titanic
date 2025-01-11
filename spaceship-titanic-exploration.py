@@ -937,7 +937,7 @@ CV_FOLDS = 5
 N_TRIALS_PIPELINE = 50000
 # N_TRIALS_PIPELINE = 100
 
-N_TRIALS_HYPERPARAMETERS = 500
+N_TRIALS_HYPERPARAMETERS = 1000
 
 
 # In[43]:
@@ -1221,7 +1221,7 @@ param_grid = {
     "preprocessor__cat_low_cardinality__impute": ["constant"],  # , "most_frequent"],
     "preprocessor__cat_low_cardinality__to_num": ["ordinal"],  # "onehot" ],
     "preprocessor__cat_high_cardinality__impute": ["most_frequent"],  # ,  "constant"],
-    "preprocessor__cat_high_cardinality__to_num": ["onehot"],  # , "ordinal"],
+    "preprocessor__cat_high_cardinality__to_num": ["onehot"],  # , "onehot"],
     "preprocessor__num__impute": ["knn_5"],  # "knn_3", "knn_5", "mean", "median"],
     "preprocessor__num__scale": ["standard"],  # , "passthrough"],
     "feature_engineering__feature_selection": ["lasso"],  # , "passthrough"],
@@ -1230,8 +1230,7 @@ param_grid = {
     #     f"create_features__kw_args__use_{feature}": [False, True]
     #     for feature in CREATED_FEATURES
     # },
-    # "create_features__kw_args__use_AmountSpentTotal": [False], # TODO the very best was with False
-    "create_features__kw_args__use_AmountSpentTotal": [True],
+    "create_features__kw_args__use_AmountSpentTotal": [False],
     "create_features__kw_args__use_CabinDeck": [True],
     "create_features__kw_args__use_CabinNumber": [True],
     "create_features__kw_args__use_CabinSide": [True],
@@ -1336,11 +1335,11 @@ def objective(trial, pipeline, classifier_name):
             criterion=trial.suggest_categorical("classifier__criterion", ["friedman_mse", "squared_error"]),
             learning_rate=trial.suggest_float("classifier__learning_rate", 0.01, 0.3, log=True),
             max_depth=max_depth if max_depth != MAX_DEPTH else None,
-            max_features=trial.suggest_categorical("classifier__max_features", [None, "sqrt", "log2"]),
-            min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 50),
-            min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 50),
-            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 1000),
-            subsample=trial.suggest_float("classifier__subsample", 0.7, 1.0),
+            # max_features=trial.suggest_categorical("classifier__max_features", [None, "sqrt", "log2"]),
+            # min_samples_leaf=trial.suggest_int("classifier__min_samples_leaf", 1, 50),
+            # min_samples_split=trial.suggest_int("classifier__min_samples_split", 2, 50),
+            n_estimators=trial.suggest_int("classifier__n_estimators", 100, 1000, log=True),
+            subsample=trial.suggest_float("classifier__subsample", 0.7, 1.0, step=0.1),
         )
     # elif classifier_name == "XGBoost":
     #     classifier.set_params(
@@ -1567,33 +1566,3 @@ print(predictions_df)
 # Save predictions to a CSV file
 predictions_df.to_csv(f"{DATA_DIR}/predictions.csv", index=False)
 
-
-# ## TODO
-# 
-# - Exploratory Data Analysis:
-#   - Data visualization
-#   - Find missing values
-#   - Find outliers, extreme or unusual values
-#   - Correlation analysis between numerical attributes and the target variable
-#   - For better data fitting, a more detailed analysis of each categorical variable is necessary.
-# - Data Preparation:
-#   - Data cleaning
-#   - Handle: outliers, extreme or unusual values
-#   - Missing values (removal, transformation, imputation, etc.)
-#   - Transform categorical variables into numerical (e.g., one-hot encoding)
-#   - (?) Transform numerical variables into categorical (e.g., discretization)
-#   - Feature engineering:
-#     - Create new attributes from existing ones to improve data description and reduce dimensionality.
-#     - It may also be interesting to create new attributes based on the interaction of highly correlated variables.
-#   - Feature selection
-#   - Instance selection
-# - Model Training:
-#   - Cross-validation
-#   - Grid search
-# - Model Evaluation:
-#   - Evaluation metrics
-#   - Model comparison
-# - Results Presentation:
-#   - Results visualization
-#   - Results interpretation
-# 
